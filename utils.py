@@ -169,6 +169,14 @@ def append_order_row(row: dict):
     clear_cache()
 
 
+def format_currency(value) -> str:
+    """Format a number as Malaysian Ringgit, e.g. RM 1,234.50"""
+    try:
+        return f"RM {float(value):,.2f}"
+    except (TypeError, ValueError):
+        return f"RM {value}"
+
+
 def timestamp_now() -> str:
     return datetime.now().strftime("%-m/%-d/%Y %H:%M")
 

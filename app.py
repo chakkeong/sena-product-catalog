@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import load_orders, load_products, load_users, latest_versions_only, apply_custom_css
+from utils import load_orders, load_products, load_users, latest_versions_only, apply_custom_css, format_currency
 
 st.set_page_config(
     page_title="Sena Product Catalog",
@@ -34,7 +34,7 @@ col1, col2, col3, col4 = st.columns(4)
 for col, label, value in zip(
     [col1, col2, col3, col4],
     ["Total Revenue", "Total Purchase Orders", "Active Products", "Registered Users"],
-    [f"${total_revenue:,.2f}", f"{total_pos}", f"{total_products}", f"{total_users}"],
+    [f"{format_currency(total_revenue)}", f"{total_pos}", f"{total_products}", f"{total_users}"],
 ):
     with col:
         st.markdown(
@@ -54,6 +54,7 @@ if not latest_orders.empty:
         st.subheader("Revenue by Tier")
         revenue_by_tier = latest_orders.groupby("Tier")["Total"].sum().reset_index().sort_values("Total", ascending=False)
         fig = px.bar(revenue_by_tier, x="Tier", y="Total", color_discrete_sequence=["#4F46E5"])
+        fig.update_yaxes(tickprefix="RM ")
         fig.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=320)
         st.plotly_chart(fig, use_container_width=True)
 
@@ -69,13 +70,11 @@ if not latest_orders.empty:
         st.plotly_chart(fig2, use_container_width=True)
 
     st.subheader("Recent Purchase Orders")
-    st.dataframe(
-        latest_orders.sort_values("Timestamp", ascending=False)[
-            ["PO", "Email", "Tier", "Total", "Status", "Timestamp"]
-        ].head(10),
-        use_container_width=True,
-        hide_index=True,
-    )
+    display_orders = latest_orders.sort_values("Timestamp", ascending=False)[
+        ["PO", "Email", "Tier", "Total", "Status", "Timestamp"]
+    ].head(10).copy()
+    display_orders["Total"] = display_orders["Total"].apply(format_currency)
+    st.dataframe(display_orders, use_container_width=True, hide_index=True)
 else:
     st.info("No orders yet. Head to the Catalog page to create your first purchase order.")
 
