@@ -20,6 +20,12 @@ def clean(text) -> str:
     return html.escape(str(text)).replace("\n", " ").replace("\r", " ").strip()
 
 
+@st.dialog("Product Image")
+def show_large_image(img_url: str, name: str):
+    st.image(img_url, width=400)
+    st.caption(name)
+
+
 with st.sidebar:
     st.header("Buyer")
     if not users_df.empty and "Email" in users_df.columns:
@@ -86,18 +92,16 @@ for row_df in rows:
                 f'<div style="padding:12px 4px 4px 4px;">'
                 f'<div style="font-weight:700;font-size:1.02rem;color:#111827;margin-bottom:2px;">{name}</div>'
                 f'<div style="color:#6B7280;font-size:0.85rem;min-height:2.2em;margin-bottom:8px;">{description}</div>'
-                f'{size_html}'
-                f'<div class="price-tag" style="margin-top:10px;">{price_str}</div>'
+                f'<div class="size-badge-row">{size_html}</div>'
+                f'<div class="price-tag">{price_str}</div>'
                 f'</div></div></div>'
             )
 
             st.markdown(card_html, unsafe_allow_html=True)
 
             if img_url:
-                st.markdown(
-                    f'<a href="{img_url}" target="_blank" style="font-size:0.78rem;color:#4F46E5;text-decoration:none;">🔍 View full size</a>',
-                    unsafe_allow_html=True,
-                )
+                if st.button("🔍 View larger", key=f"viewlarge_{product.get('ProductID')}", use_container_width=False):
+                    show_large_image(img_url, name)
 
             qty_key = f"qty_{product.get('ProductID')}"
             qty = st.number_input("Qty", min_value=1, value=1, step=1, key=qty_key, label_visibility="collapsed")
