@@ -1,10 +1,16 @@
 """
 Shared utilities for Sena Product Catalog.
-Handles Google Sheets connection, data loading/saving, pricing logic,
-and PO number / version generation.
+Matches the EXISTING sheet structure:
+  Users:    Email, Tier
+  Products: ProductID, Name, Description, Tier1Price, Tier2Price, Tier3Price,
+            ConsumerPrice, ImageURL, Size/Measurement
+  Orders:   PO, Timestamp, Email, Tier, ItemsJSON, Total, Status, Version
+            (one row per PO/version; ItemsJSON is a JSON string of line items)
 """
 
+import json
 import re
+import time
 from datetime import datetime
 
 import gspread
@@ -22,13 +28,10 @@ TIER_PRICE_COLUMN = {
     "Tier2": "Tier2Price",
     "Tier3": "Tier3Price",
     "Consumer": "ConsumerPrice",
-    "Guest": "ConsumerPrice",  # Guests see consumer pricing
+    "Guest": "ConsumerPrice",
 }
 
-ORDERS_COLUMNS = [
-    "PONumber", "OrderID", "UserID", "ProductID", "ProductName",
-    "Qty", "UnitPrice", "LineTotal", "Version", "Timestamp", "Status",
-]
+ORDERS_COLUMNS = ["PO", "Timestamp", "Email", "Tier", "ItemsJSON", "Total", "Status", "Version"]
 
 
 # ---------------------------------------------------------------------------
@@ -37,14 +40,12 @@ ORDERS_COLUMNS = [
 
 @st.cache_resource(show_spinner=False)
 def get_client():
-    """Authenticate with Google using the service account stored in secrets."""
     creds_dict = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     return gspread.authorize(creds)
 
 
 def get_spreadsheet():
-    """Open the spreadsheet by its ID (set in secrets.toml as `sheet_id`)."""
     client = get_client()
     return client.open_by_key(st.secrets["sheet_id"])
 
@@ -55,11 +56,9 @@ def get_spreadsheet():
 
 @st.cache_data(ttl=30, show_spinner=False)
 def load_sheet(tab_name: str) -> pd.DataFrame:
-    """Load a worksheet tab into a pandas DataFrame."""
     ws = get_spreadsheet().worksheet(tab_name)
     records = ws.get_all_records()
-    df = pd.DataFrame(records)
-    return df
+    return pd.DataFrame(records)
 
 
 def load_products() -> pd.DataFrame:
@@ -78,9 +77,13 @@ def load_orders() -> pd.DataFrame:
     df = load_sheet("Orders")
     if df.empty:
         return pd.DataFrame(columns=ORDERS_COLUMNS)
-    for col in ["Qty", "UnitPrice", "LineTotal", "Version"]:
-        if col in df.columns:
-            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0)
+    if "Total" in df.columns:
+        df["Total"] = pd.to_numeric(df["Total"], errors="coerce").fillna(0)
+    if "Version" in df.columns:
+        df["Version"] = pd.to_numeric(df["Version"], errors="coerce").fillna(1).astype(int)
+        df.loc[df["Version"] < 1, "Version"] = 1
+    else:
+        df["Version"] = 1
     return df
 
 
@@ -93,46 +96,50 @@ def clear_cache():
 # ---------------------------------------------------------------------------
 
 def get_price_for_tier(product_row: pd.Series, tier: str) -> float:
-    """Return the correct unit price for a product given a user tier."""
     col = TIER_PRICE_COLUMN.get(tier, "ConsumerPrice")
     return float(product_row.get(col, 0) or 0)
 
 
 def drive_thumbnail_url(image_url: str) -> str:
-    """Convert a Google Drive share link into a thumbnail-rendering URL."""
     if not image_url:
         return ""
-    match = re.search(r"/d/([a-zA-Z0-9_-]+)", image_url)
-    if not match:
-        match = re.search(r"id=([a-zA-Z0-9_-]+)", image_url)
+    match = re.search(r"/d/([a-zA-Z0-9_-]+)", image_url) or re.search(r"id=([a-zA-Z0-9_-]+)", image_url)
     if match:
-        file_id = match.group(1)
-        return f"https://drive.google.com/thumbnail?id={file_id}&sz=w400"
+        return f"https://drive.google.com/thumbnail?id={match.group(1)}&sz=w400"
     return image_url
+
+
+# ---------------------------------------------------------------------------
+# Items JSON helpers
+# ---------------------------------------------------------------------------
+
+def parse_items(items_json: str) -> list[dict]:
+    """Parse the ItemsJSON column into a list of line-item dicts."""
+    if not items_json:
+        return []
+    try:
+        return json.loads(items_json)
+    except (json.JSONDecodeError, TypeError):
+        return []
+
+
+def items_total(items: list[dict]) -> float:
+    return sum(float(i.get("price", 0)) * float(i.get("qty", 0)) for i in items)
 
 
 # ---------------------------------------------------------------------------
 # PO numbering / versioning
 # ---------------------------------------------------------------------------
 
-def generate_po_number(orders_df: pd.DataFrame) -> str:
-    """Generate the next auto-incremented PO number, e.g. PO-0001."""
-    if orders_df.empty or "PONumber" not in orders_df.columns:
-        return "PO-0001"
-    numbers = []
-    for po in orders_df["PONumber"].dropna().unique():
-        m = re.search(r"(\d+)$", str(po))
-        if m:
-            numbers.append(int(m.group(1)))
-    next_num = (max(numbers) + 1) if numbers else 1
-    return f"PO-{next_num:04d}"
+def generate_po_number() -> str:
+    """Generate a PO number using a timestamp, matching the existing scheme."""
+    return f"PO-{int(time.time())}"
 
 
 def get_next_version(orders_df: pd.DataFrame, po_number: str) -> int:
-    """Get the next version number for an existing PO (for amendments)."""
     if orders_df.empty:
         return 1
-    existing = orders_df[orders_df["PONumber"] == po_number]
+    existing = orders_df[orders_df["PO"] == po_number]
     if existing.empty:
         return 1
     return int(existing["Version"].max()) + 1
@@ -142,7 +149,7 @@ def latest_versions_only(orders_df: pd.DataFrame) -> pd.DataFrame:
     """Collapse the orders table down to only the latest version of each PO."""
     if orders_df.empty:
         return orders_df
-    idx = orders_df.groupby("PONumber")["Version"].idxmax()
+    idx = orders_df.groupby("PO")["Version"].idxmax()
     return orders_df.loc[idx].reset_index(drop=True)
 
 
@@ -150,18 +157,17 @@ def latest_versions_only(orders_df: pd.DataFrame) -> pd.DataFrame:
 # Writing data
 # ---------------------------------------------------------------------------
 
-def append_order_rows(rows: list[dict]):
-    """Append new order line rows to the Orders sheet. Never overwrites history."""
+def append_order_row(row: dict):
+    """Append one new PO/version row. Never overwrites existing history."""
     ws = get_spreadsheet().worksheet("Orders")
     existing_headers = ws.row_values(1)
     if not existing_headers:
         ws.append_row(ORDERS_COLUMNS)
         existing_headers = ORDERS_COLUMNS
-    for row in rows:
-        ordered_row = [row.get(col, "") for col in existing_headers]
-        ws.append_row(ordered_row, value_input_option="USER_ENTERED")
+    ordered_row = [row.get(col, "") for col in existing_headers]
+    ws.append_row(ordered_row, value_input_option="USER_ENTERED")
     clear_cache()
 
 
 def timestamp_now() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now().strftime("%-m/%-d/%Y %H:%M")
