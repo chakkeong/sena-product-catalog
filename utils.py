@@ -231,6 +231,12 @@ def apply_custom_css():
             font-size: 1.5rem;
             font-weight: 800;
             color: #4F46E5;
+            margin-top: 10px;
+        }
+        .size-badge-row {
+            min-height: 26px;
+            margin-bottom: 8px;
+            display: block;
         }
         .size-badge {
             background: #EEF2FF;
