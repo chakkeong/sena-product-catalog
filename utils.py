@@ -105,7 +105,7 @@ def drive_thumbnail_url(image_url: str) -> str:
         return ""
     match = re.search(r"/d/([a-zA-Z0-9_-]+)", image_url) or re.search(r"id=([a-zA-Z0-9_-]+)", image_url)
     if match:
-        return f"https://drive.google.com/thumbnail?id={match.group(1)}&sz=w400"
+        return f"https://drive.google.com/thumbnail?id={match.group(1)}&sz=w1200"
     return image_url
 
 
@@ -171,3 +171,97 @@ def append_order_row(row: dict):
 
 def timestamp_now() -> str:
     return datetime.now().strftime("%-m/%-d/%Y %H:%M")
+
+
+# ---------------------------------------------------------------------------
+# Shared visual styling
+# ---------------------------------------------------------------------------
+
+def apply_custom_css():
+    """Inject shared CSS for a consistent, polished look across all pages."""
+    st.markdown(
+        """
+        <style>
+        .stApp { background-color: #FAFAFB; }
+
+        h1, h2, h3 { color: #111827; font-weight: 700; }
+
+        .kpi-card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 1.3rem 1.5rem;
+            border: 1px solid #ECECEF;
+            box-shadow: 0 2px 12px rgba(17,24,39,0.05);
+        }
+        .kpi-label { font-size: 0.82rem; color: #6B7280; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 0.35rem; }
+        .kpi-value { font-size: 1.9rem; font-weight: 800; color: #111827; }
+
+        .product-card {
+            background: #ffffff;
+            border-radius: 18px;
+            border: 1px solid #ECECEF;
+            box-shadow: 0 2px 10px rgba(17,24,39,0.04);
+            overflow: hidden;
+            transition: box-shadow 0.15s ease;
+        }
+        .product-image-wrap {
+            width: 100%;
+            height: 200px;
+            overflow: hidden;
+            border-radius: 14px;
+            background: #F3F4F6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .product-image-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .price-tag {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: #4F46E5;
+        }
+        .size-badge {
+            background: #EEF2FF;
+            color: #4F46E5;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .tier-badge {
+            background: #ECFDF5;
+            color: #059669;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        section[data-testid="stSidebar"] {
+            background-color: #ffffff;
+            border-right: 1px solid #ECECEF;
+        }
+
+        div[data-testid="stButton"] button {
+            border-radius: 10px;
+            font-weight: 600;
+        }
+        div[data-testid="stButton"] button[kind="primary"] {
+            background-color: #4F46E5;
+            border-color: #4F46E5;
+        }
+
+        [data-testid="stExpander"] {
+            border-radius: 14px;
+            border: 1px solid #ECECEF;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
