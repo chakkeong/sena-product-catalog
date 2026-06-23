@@ -6,27 +6,22 @@ st.set_page_config(page_title="Catalog — Sena Product Catalog", page_icon="�
 
 st.title("📦 Product Catalog")
 
-# ---------------------------------------------------------------------------
-# User / tier selection (sidebar)
-# ---------------------------------------------------------------------------
 users_df = load_users()
 products_df = load_products()
 
 with st.sidebar:
     st.header("Buyer")
-    if not users_df.empty and "Name" in users_df.columns:
-        user_options = users_df["Name"].tolist() + ["Guest"]
+    if not users_df.empty and "Email" in users_df.columns:
+        user_options = users_df["Email"].tolist() + ["Guest"]
     else:
         user_options = ["Guest"]
 
-    selected_name = st.selectbox("Select user", user_options)
+    selected_email = st.selectbox("Select buyer email", user_options)
 
-    if selected_name == "Guest":
-        selected_user_id = "GUEST"
+    if selected_email == "Guest":
         selected_tier = "Guest"
     else:
-        user_row = users_df[users_df["Name"] == selected_name].iloc[0]
-        selected_user_id = user_row.get("UserID", "")
+        user_row = users_df[users_df["Email"] == selected_email].iloc[0]
         selected_tier = user_row.get("Tier", "Guest")
 
     st.markdown(f"**Pricing tier:** `{selected_tier}`")
@@ -35,15 +30,12 @@ with st.sidebar:
     st.header("🛒 Cart")
     cart = st.session_state.get("cart", [])
     if cart:
-        cart_total = sum(item["LineTotal"] for item in cart)
+        cart_total = sum(item["price"] * item["qty"] for item in cart)
         st.write(f"{len(cart)} item(s) — ${cart_total:,.2f}")
         st.page_link("pages/2_Cart.py", label="Go to Cart →", icon="🛒")
     else:
         st.write("Cart is empty")
 
-# ---------------------------------------------------------------------------
-# Search bar
-# ---------------------------------------------------------------------------
 search_term = st.text_input("🔍 Search products", placeholder="Search by name or description...")
 
 if search_term:
@@ -57,9 +49,6 @@ else:
 
 st.caption(f"{len(filtered_df)} product(s) found")
 
-# ---------------------------------------------------------------------------
-# Product grid
-# ---------------------------------------------------------------------------
 if "cart" not in st.session_state:
     st.session_state.cart = []
 
@@ -91,12 +80,12 @@ for row_df in rows:
 
                 if st.button("Add to Cart", key=f"add_{product.get('ProductID')}", use_container_width=True):
                     st.session_state.cart.append({
-                        "ProductID": product.get("ProductID"),
-                        "ProductName": product.get("Name"),
-                        "Size": size,
-                        "Qty": qty,
-                        "UnitPrice": price,
-                        "LineTotal": price * qty,
-                        "UserID": selected_user_id,
+                        "id": product.get("ProductID"),
+                        "name": product.get("Name"),
+                        "size": size,
+                        "qty": qty,
+                        "price": price,
+                        "email": selected_email,
+                        "tier": selected_tier,
                     })
                     st.toast(f"Added {product.get('Name')} to cart", icon="🛒")
