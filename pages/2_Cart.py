@@ -2,7 +2,7 @@ import json
 
 import streamlit as st
 
-from utils import generate_po_number, append_order_row, timestamp_now, apply_custom_css
+from utils import generate_po_number, append_order_row, timestamp_now, apply_custom_css, format_currency
 
 st.set_page_config(page_title="Cart — Sena Product Catalog", page_icon="🛒", layout="wide")
 apply_custom_css()
@@ -25,8 +25,8 @@ for i, item in enumerate(cart):
     c1, c2, c3, c4, c5 = st.columns([3, 1, 1.5, 1.5, 0.8])
     c1.write(f"**{item['name']}**  \n_{item.get('size', '')}_")
     c2.write(f"Qty: {item['qty']}")
-    c3.write(f"${item['price']:,.2f} each")
-    c4.write(f"**${item['price'] * item['qty']:,.2f}**")
+    c3.write(f"{format_currency(item['price'])} each")
+    c4.write(f"**{format_currency(item['price'] * item['qty'])}**")
     if c5.button("✕", key=f"remove_{i}"):
         cart.pop(i)
         st.rerun()
@@ -34,7 +34,7 @@ for i, item in enumerate(cart):
 st.write("---")
 
 total = sum(item["price"] * item["qty"] for item in cart)
-st.markdown(f"## Total: ${total:,.2f}")
+st.markdown(f"## Total: {format_currency(total)}")
 
 col_a, col_b = st.columns(2)
 with col_a:

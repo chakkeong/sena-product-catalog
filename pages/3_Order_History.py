@@ -11,6 +11,7 @@ from utils import (
     timestamp_now,
     parse_items,
     apply_custom_css,
+    format_currency,
 )
 
 st.set_page_config(page_title="Order History — Sena Product Catalog", page_icon="📋", layout="wide")
@@ -42,11 +43,13 @@ for po_number in po_list:
     status = current_row.get("Status", "")
     total = current_row.get("Total", 0)
 
-    with st.expander(f"**{po_number}** — {email} — ${total:,.2f} — v{current_version_num} — {status}"):
+    with st.expander(f"**{po_number}** — {email} — {format_currency(total)} — v{current_version_num} — {status}"):
         items_df = pd.DataFrame(items)
         if not items_df.empty:
             display_df = items_df.rename(columns={"name": "Product", "qty": "Qty", "price": "Unit Price", "size": "Size"})
             display_df["Line Total"] = display_df["Qty"] * display_df["Unit Price"]
+            display_df["Unit Price"] = display_df["Unit Price"].apply(format_currency)
+            display_df["Line Total"] = display_df["Line Total"].apply(format_currency)
             st.dataframe(
                 display_df[["Product", "Size", "Qty", "Unit Price", "Line Total"]],
                 use_container_width=True, hide_index=True,
@@ -56,9 +59,9 @@ for po_number in po_list:
             with st.popover("View full version history"):
                 for _, vrow in po_versions.sort_values("Version").iterrows():
                     v_items = parse_items(vrow.get("ItemsJSON", ""))
-                    st.markdown(f"**Version {int(vrow['Version'])}** — {vrow.get('Timestamp', '')} — {vrow.get('Status', '')} — ${vrow.get('Total', 0):,.2f}")
+                    st.markdown(f"**Version {int(vrow['Version'])}** — {vrow.get('Timestamp', '')} — {vrow.get('Status', '')} — {format_currency(vrow.get('Total', 0))}")
                     for it in v_items:
-                        st.write(f"  • {it.get('name')} × {it.get('qty')} @ ${it.get('price'):,.2f}")
+                        st.write(f"  • {it.get('name')} × {it.get('qty')} @ {format_currency(it.get('price'))}")
 
         st.write("---")
         st.markdown("**Amend this order**")
@@ -72,7 +75,7 @@ for po_number in po_list:
                 "Qty", min_value=0, value=int(it.get("qty", 0)), step=1,
                 key=f"amend_qty_{po_number}_{idx}", label_visibility="collapsed",
             )
-            c3.write(f"${float(it.get('price', 0)) * new_qty:,.2f}")
+            c3.write(format_currency(float(it.get("price", 0)) * new_qty))
             edited_items.append({
                 "id": it.get("id"), "name": it.get("name"),
                 "price": float(it.get("price", 0)), "qty": new_qty, "size": it.get("size", ""),
