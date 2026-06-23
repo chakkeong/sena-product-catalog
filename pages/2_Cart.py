@@ -2,9 +2,10 @@ import json
 
 import streamlit as st
 
-from utils import generate_po_number, append_order_row, timestamp_now
+from utils import generate_po_number, append_order_row, timestamp_now, apply_custom_css
 
 st.set_page_config(page_title="Cart — Sena Product Catalog", page_icon="🛒", layout="wide")
+apply_custom_css()
 
 st.title("🛒 Cart & Checkout")
 

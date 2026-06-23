@@ -10,9 +10,11 @@ from utils import (
     append_order_row,
     timestamp_now,
     parse_items,
+    apply_custom_css,
 )
 
 st.set_page_config(page_title="Order History — Sena Product Catalog", page_icon="📋", layout="wide")
+apply_custom_css()
 
 st.title("📋 Purchase Order History")
 

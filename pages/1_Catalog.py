@@ -1,8 +1,9 @@
 import streamlit as st
 
-from utils import load_products, load_users, get_price_for_tier, drive_thumbnail_url
+from utils import load_products, load_users, get_price_for_tier, drive_thumbnail_url, apply_custom_css
 
 st.set_page_config(page_title="Catalog — Sena Product Catalog", page_icon="📦", layout="wide")
+apply_custom_css()
 
 st.title("📦 Product Catalog")
 
@@ -24,7 +25,7 @@ with st.sidebar:
         user_row = users_df[users_df["Email"] == selected_email].iloc[0]
         selected_tier = user_row.get("Tier", "Guest")
 
-    st.markdown(f"**Pricing tier:** `{selected_tier}`")
+    st.markdown(f'<span class="tier-badge">{selected_tier}</span>', unsafe_allow_html=True)
 
     st.write("---")
     st.header("🛒 Cart")
@@ -59,24 +60,32 @@ for row_df in rows:
     cols = st.columns(NUM_COLS)
     for col, (_, product) in zip(cols, row_df.iterrows()):
         with col:
-            with st.container(border=True):
+            with st.container(border=False):
                 img_url = drive_thumbnail_url(product.get("ImageURL", ""))
-                if img_url:
-                    st.image(img_url, use_container_width=True)
-                st.markdown(f"**{product.get('Name', '')}**")
-                st.caption(product.get("Description", ""))
                 size = product.get("Size/Measurement", "")
-                if size:
-                    st.markdown(
-                        f"<span style='background:#EEF2FF;color:#4F46E5;padding:2px 8px;"
-                        f"border-radius:10px;font-size:0.75rem;'>{size}</span>",
-                        unsafe_allow_html=True,
-                    )
                 price = get_price_for_tier(product, selected_tier)
-                st.markdown(f"### ${price:,.2f}")
+
+                st.markdown(
+                    f"""
+                    <div class="product-card">
+                        <div style="padding: 10px;">
+                            <div class="product-image-wrap">
+                                {f'<img src="{img_url}" />' if img_url else '<span style="color:#9CA3AF;font-size:0.8rem;">No image</span>'}
+                            </div>
+                            <div style="padding: 12px 4px 4px 4px;">
+                                <div style="font-weight:700;font-size:1.02rem;color:#111827;margin-bottom:2px;">{product.get('Name', '')}</div>
+                                <div style="color:#6B7280;font-size:0.85rem;min-height:2.2em;margin-bottom:8px;">{product.get('Description', '')}</div>
+                                {f'<span class="size-badge">{size}</span>' if size else ''}
+                                <div class="price-tag" style="margin-top:10px;">${price:,.2f}</div>
+                            </div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
 
                 qty_key = f"qty_{product.get('ProductID')}"
-                qty = st.number_input("Qty", min_value=1, value=1, step=1, key=qty_key)
+                qty = st.number_input("Qty", min_value=1, value=1, step=1, key=qty_key, label_visibility="collapsed")
 
                 if st.button("Add to Cart", key=f"add_{product.get('ProductID')}", use_container_width=True):
                     st.session_state.cart.append({
@@ -89,3 +98,5 @@ for row_df in rows:
                         "tier": selected_tier,
                     })
                     st.toast(f"Added {product.get('Name')} to cart", icon="🛒")
+
+                st.write("")
