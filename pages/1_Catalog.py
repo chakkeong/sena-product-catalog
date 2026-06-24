@@ -20,9 +20,9 @@ def clean(text) -> str:
     return html.escape(str(text)).replace("\n", " ").replace("\r", " ").strip()
 
 
-@st.dialog("Product Image")
+@st.dialog("Product Image", width="large")
 def show_large_image(img_url: str, name: str):
-    st.image(img_url, width=400)
+    st.image(img_url, use_container_width=True)
     st.caption(name)
 
 
@@ -99,12 +99,14 @@ for row_df in rows:
 
             st.markdown(card_html, unsafe_allow_html=True)
 
-            if img_url:
-                if st.button("🔍 View larger", key=f"viewlarge_{product.get('ProductID')}", use_container_width=False):
-                    show_large_image(img_url, name)
-
             qty_key = f"qty_{product.get('ProductID')}"
-            qty = st.number_input("Qty", min_value=1, value=1, step=1, key=qty_key, label_visibility="collapsed")
+            btn_col, qty_col = st.columns([1, 1])
+            with btn_col:
+                if img_url:
+                    if st.button("🔍 View larger", key=f"viewlarge_{product.get('ProductID')}", use_container_width=True):
+                        show_large_image(img_url, name)
+            with qty_col:
+                qty = st.number_input("Qty", min_value=1, value=1, step=1, key=qty_key, label_visibility="collapsed")
 
             if st.button("Add to Cart", key=f"add_{product.get('ProductID')}", use_container_width=True):
                 st.session_state.cart.append({
