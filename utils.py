@@ -366,6 +366,10 @@ def apply_custom_css():
     st.markdown(
         """
         <style>
+        :root, html, body, .stApp {
+            color-scheme: light only;
+            forced-color-adjust: none;
+        }
         .stApp { background-color: #FAFAFB; }
 
         h1, h2, h3 { color: #111827; font-weight: 700; }
