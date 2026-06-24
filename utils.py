@@ -394,6 +394,19 @@ def apply_custom_css():
             color: #4F46E5;
             margin-top: 10px;
         }
+        .price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        .price-strike {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #9CA3AF;
+            text-decoration: line-through;
+        }
         .size-badge-row {
             min-height: 26px;
             margin-bottom: 8px;
