@@ -525,8 +525,7 @@ def apply_custom_css():
         .contact-fb { background: #1877F2; font-family: Georgia, serif; }
         .contact-wa { background: #25D366; }
 
-        [data-testid="collapsedControl"],
-        [data-testid="stSidebarCollapsedControl"] {
+        [data-testid="collapsedControl"] button[data-testid="stBaseButton-headerNoPadding"] {
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
@@ -534,22 +533,18 @@ def apply_custom_css():
             min-width: 70px !important;
             height: 36px !important;
             padding: 0 14px !important;
-            overflow: visible !important;
             background-color: #4F46E5 !important;
             border-radius: 8px !important;
         }
-        [data-testid="collapsedControl"] svg,
-        [data-testid="stSidebarCollapsedControl"] svg {
+        [data-testid="collapsedControl"] button[data-testid="stBaseButton-headerNoPadding"] svg {
             display: none !important;
         }
-        [data-testid="collapsedControl"]::after,
-        [data-testid="stSidebarCollapsedControl"]::after {
+        [data-testid="collapsedControl"] button[data-testid="stBaseButton-headerNoPadding"]::after {
             content: "Menu" !important;
             font-size: 14px !important;
             font-weight: 700 !important;
             color: #ffffff !important;
             white-space: nowrap !important;
-            display: inline-block !important;
         }
         </style>
         """,
