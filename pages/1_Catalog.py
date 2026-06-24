@@ -2,7 +2,7 @@ import html
 
 import streamlit as st
 
-from utils import load_products, get_price_for_tier, drive_thumbnail_url, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, gate_access, LOGO_PATH
+from utils import load_products, get_price_for_tier, drive_thumbnail_url, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, gate_access, is_admin, LOGO_PATH
 
 st.set_page_config(page_title="Catalog — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
@@ -12,7 +12,7 @@ render_user_sidebar(user_record)
 render_brand_header("Product Catalog")
 
 selected_email = user_record.get("Email", "")
-selected_tier = user_record.get("Tier", "Guest")
+own_tier = user_record.get("Tier", "Guest")
 
 products_df = load_products()
 
@@ -30,7 +30,18 @@ def show_large_image(img_url: str, name: str):
     st.caption(name)
 
 
+admin_mode = is_admin(user_record)
+
 with st.sidebar:
+    if admin_mode:
+        st.header("👑 Admin Preview")
+        tier_options = ["Tier1", "Tier2", "Tier3", "Consumer", "Guest"]
+        default_idx = tier_options.index(own_tier) if own_tier in tier_options else 0
+        selected_tier = st.selectbox("View pricing as tier", tier_options, index=default_idx)
+        st.write("---")
+    else:
+        selected_tier = own_tier
+
     st.header("🛒 Cart")
     cart = st.session_state.get("cart", [])
     if cart:
@@ -70,8 +81,21 @@ for row_df in rows:
             price = get_price_for_tier(product, selected_tier)
             price_str = format_currency(price)
 
+            consumer_price = float(product.get("ConsumerPrice", 0) or 0)
+            show_margin = selected_tier in ("Tier1", "Tier2", "Tier3") and consumer_price > price
+
             image_html = f'<img src="{img_url}" />' if img_url else '<span style="color:#9CA3AF;font-size:0.8rem;">No image</span>'
             size_html = f'<span class="size-badge">{size}</span>' if size else ""
+
+            if show_margin:
+                price_section = (
+                    f'<div class="price-row">'
+                    f'<span class="price-tag">{price_str}</span>'
+                    f'<span class="price-strike">{format_currency(consumer_price)}</span>'
+                    f'</div>'
+                )
+            else:
+                price_section = f'<div class="price-tag">{price_str}</div>'
 
             card_html = (
                 f'<div class="product-card"><div style="padding:10px;">'
@@ -80,7 +104,7 @@ for row_df in rows:
                 f'<div style="font-weight:700;font-size:1.02rem;color:#111827;margin-bottom:2px;">{name}</div>'
                 f'<div style="color:#6B7280;font-size:0.85rem;min-height:2.2em;margin-bottom:8px;">{description}</div>'
                 f'<div class="size-badge-row">{size_html}</div>'
-                f'<div class="price-tag">{price_str}</div>'
+                f'{price_section}'
                 f'</div></div></div>'
             )
 
