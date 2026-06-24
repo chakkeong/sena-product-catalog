@@ -18,8 +18,10 @@ from utils import (
     render_contact_widget,
     gate_access,
     is_admin,
+    get_user_record,
     LOGO_PATH,
 )
+from pdf_generator import generate_po_pdf
 
 st.set_page_config(page_title="Order History — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
@@ -82,6 +84,28 @@ for po_number in po_list:
                 display_df[["Product", "Size", "Qty", "Unit Price", "Line Total"]],
                 use_container_width=True, hide_index=True,
             )
+
+        customer_record = get_user_record(email) or {}
+        pdf_bytes = generate_po_pdf(
+            po_number=po_number,
+            customer_name=customer_record.get("Name", "") or email,
+            customer_email=email,
+            customer_company=customer_record.get("Company", ""),
+            customer_phone=customer_record.get("Phone", ""),
+            tier=current_row.get("Tier", ""),
+            status=status,
+            timestamp=current_row.get("Timestamp", ""),
+            items=items,
+            total=total,
+            version=current_version_num,
+        )
+        st.download_button(
+            "📄 Download PDF",
+            data=pdf_bytes,
+            file_name=f"{po_number}.pdf",
+            mime="application/pdf",
+            key=f"pdf_{po_number}",
+        )
 
         if current_version_num > 1:
             with st.popover("View full version history"):
