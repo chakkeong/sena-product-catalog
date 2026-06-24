@@ -525,17 +525,22 @@ def apply_custom_css():
         .contact-fb { background: #1877F2; font-family: Georgia, serif; }
         .contact-wa { background: #25D366; }
 
-        [data-testid="collapsedControl"] {
-            display: flex;
-            align-items: center;
+        [data-testid="collapsedControl"],
+        [data-testid="stSidebarCollapsedControl"] {
+            display: flex !important;
+            align-items: center !important;
+            width: auto !important;
+            overflow: visible !important;
         }
-        [data-testid="collapsedControl"]::after {
-            content: "Menu";
-            font-size: 14px;
-            font-weight: 600;
-            margin-left: 6px;
-            color: #111827;
-            white-space: nowrap;
+        [data-testid="collapsedControl"]::after,
+        [data-testid="stSidebarCollapsedControl"]::after {
+            content: "Menu" !important;
+            font-size: 14px !important;
+            font-weight: 600 !important;
+            margin-left: 6px !important;
+            color: #111827 !important;
+            white-space: nowrap !important;
+            display: inline-block !important;
         }
         </style>
         """,
