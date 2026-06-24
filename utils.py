@@ -529,16 +529,25 @@ def apply_custom_css():
         [data-testid="stSidebarCollapsedControl"] {
             display: flex !important;
             align-items: center !important;
+            justify-content: center !important;
             width: auto !important;
+            min-width: 70px !important;
+            height: 36px !important;
+            padding: 0 14px !important;
             overflow: visible !important;
+            background-color: #4F46E5 !important;
+            border-radius: 8px !important;
+        }
+        [data-testid="collapsedControl"] svg,
+        [data-testid="stSidebarCollapsedControl"] svg {
+            display: none !important;
         }
         [data-testid="collapsedControl"]::after,
         [data-testid="stSidebarCollapsedControl"]::after {
             content: "Menu" !important;
             font-size: 14px !important;
-            font-weight: 600 !important;
-            margin-left: 6px !important;
-            color: #111827 !important;
+            font-weight: 700 !important;
+            color: #ffffff !important;
             white-space: nowrap !important;
             display: inline-block !important;
         }
