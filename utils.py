@@ -396,10 +396,24 @@ def apply_custom_css():
         }
         .price-row {
             display: flex;
-            align-items: baseline;
-            gap: 8px;
+            flex-direction: column;
+            gap: 2px;
             margin-top: 10px;
-            flex-wrap: wrap;
+        }
+        .price-your-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #059669;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+        .price-retail-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #9CA3AF;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            margin-top: 6px;
         }
         .price-strike {
             font-size: 0.95rem;
