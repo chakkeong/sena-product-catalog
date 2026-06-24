@@ -174,7 +174,7 @@ LOGO_PATH = "Assets/logo.png"
 
 def render_brand_header(title: str, subtitle: str = ""):
     """Render a consistent branded header with the company logo, title, and subtitle."""
-    logo_col, title_col = st.columns([1, 6])
+    logo_col, title_col = st.columns([1, 6], vertical_alignment="center")
     with logo_col:
         st.image(LOGO_PATH, use_container_width=True)
     with title_col:
