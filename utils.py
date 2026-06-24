@@ -524,6 +524,19 @@ def apply_custom_css():
         }
         .contact-fb { background: #1877F2; font-family: Georgia, serif; }
         .contact-wa { background: #25D366; }
+
+        [data-testid="collapsedControl"] {
+            display: flex;
+            align-items: center;
+        }
+        [data-testid="collapsedControl"]::after {
+            content: "Menu";
+            font-size: 14px;
+            font-weight: 600;
+            margin-left: 6px;
+            color: #111827;
+            white-space: nowrap;
+        }
         </style>
         """,
         unsafe_allow_html=True,
