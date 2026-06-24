@@ -82,7 +82,7 @@ for po_number in po_list:
             display_df["Line Total"] = display_df["Line Total"].apply(format_currency)
             st.dataframe(
                 display_df[["Product", "Size", "Qty", "Unit Price", "Line Total"]],
-                use_container_width=True, hide_index=True,
+                width="stretch", hide_index=True,
             )
 
         customer_record = get_user_record(email) or {}
