@@ -2,12 +2,12 @@ import json
 
 import streamlit as st
 
-from utils import generate_po_number, append_order_row, timestamp_now, apply_custom_css, format_currency
+from utils import generate_po_number, append_order_row, timestamp_now, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, LOGO_PATH
 
-st.set_page_config(page_title="Cart — Sena Product Catalog", page_icon="🛒", layout="wide")
+st.set_page_config(page_title="Cart — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
-
-st.title("🛒 Cart & Checkout")
+render_sidebar_logo()
+render_brand_header("Cart & Checkout")
 
 if "cart" not in st.session_state:
     st.session_state.cart = []

@@ -12,12 +12,15 @@ from utils import (
     parse_items,
     apply_custom_css,
     format_currency,
+    render_brand_header,
+    render_sidebar_logo,
+    LOGO_PATH,
 )
 
-st.set_page_config(page_title="Order History — Sena Product Catalog", page_icon="📋", layout="wide")
+st.set_page_config(page_title="Order History — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
-
-st.title("📋 Purchase Order History")
+render_sidebar_logo()
+render_brand_header("Purchase Order History")
 
 orders_df = load_orders()
 

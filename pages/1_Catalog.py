@@ -2,12 +2,12 @@ import html
 
 import streamlit as st
 
-from utils import load_products, load_users, get_price_for_tier, drive_thumbnail_url, apply_custom_css, format_currency
+from utils import load_products, load_users, get_price_for_tier, drive_thumbnail_url, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, LOGO_PATH
 
-st.set_page_config(page_title="Catalog — Sena Product Catalog", page_icon="📦", layout="wide")
+st.set_page_config(page_title="Catalog — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
-
-st.title("📦 Product Catalog")
+render_sidebar_logo()
+render_brand_header("Product Catalog")
 
 users_df = load_users()
 products_df = load_products()
