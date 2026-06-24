@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import load_orders, load_products, load_users, latest_versions_only, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, gate_access, LOGO_PATH
+from utils import load_orders, load_products, load_users, latest_versions_only, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, gate_access, is_admin, LOGO_PATH
 
 st.set_page_config(
     page_title="Sena Product Catalog",
@@ -14,6 +14,11 @@ apply_custom_css()
 render_sidebar_logo()
 user_record = gate_access()
 render_user_sidebar(user_record)
+
+if not is_admin(user_record):
+    st.warning("🔒 This dashboard is restricted to administrators. Use the sidebar to go to Catalog instead.")
+    st.stop()
+
 render_brand_header("Sena Product Catalog — Dashboard", "Tiered pricing & purchase order system")
 
 try:

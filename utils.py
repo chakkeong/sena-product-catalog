@@ -213,6 +213,12 @@ def timestamp_now() -> str:
 # Login & access control
 # ---------------------------------------------------------------------------
 
+def is_admin(user_record: dict) -> bool:
+    """Check the Users tab 'Role' column to see if this person is an admin."""
+    role = str(user_record.get("Role", "")).strip().lower()
+    return role == "admin"
+
+
 def get_user_record(email: str):
     """Look up an approved user by email in the Users tab. Returns a dict or None."""
     users_df = load_users()
