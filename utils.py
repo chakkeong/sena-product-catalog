@@ -33,6 +33,8 @@ TIER_PRICE_COLUMN = {
 
 ORDERS_COLUMNS = ["PO", "Timestamp", "Email", "Tier", "ItemsJSON", "Total", "Status", "Version"]
 APPLICATIONS_COLUMNS = ["Timestamp", "Name", "Email", "Phone", "Company", "Status"]
+USERS_COLUMNS = ["Email", "Tier", "Name", "Phone", "Company", "Role"]
+APPROVABLE_TIERS = ["Tier1", "Tier2", "Tier3", "Consumer"]
 
 
 # ---------------------------------------------------------------------------
@@ -173,6 +175,68 @@ def append_row_generic(tab_name: str, row: dict, expected_columns: list[str]):
 def append_order_row(row: dict):
     """Append one new PO/version row. Never overwrites existing history."""
     append_row_generic("Orders", row, ORDERS_COLUMNS)
+
+
+def update_row_by_match(tab_name: str, match_col: str, match_value: str, updates: dict) -> bool:
+    """Find the first row in tab_name where match_col == match_value and update the given columns in place."""
+    ws = get_spreadsheet().worksheet(tab_name)
+    headers = ws.row_values(1)
+    if match_col not in headers:
+        return False
+    match_idx = headers.index(match_col)
+    all_values = ws.get_all_values()
+    for i, row in enumerate(all_values[1:], start=2):  # row 1 is the header row
+        if len(row) > match_idx and row[match_idx].strip().lower() == str(match_value).strip().lower():
+            for col_name, new_value in updates.items():
+                if col_name in headers:
+                    col_idx = headers.index(col_name) + 1
+                    ws.update_cell(i, col_idx, new_value)
+            clear_cache()
+            return True
+    return False
+
+
+def get_pending_applications() -> pd.DataFrame:
+    """Return only the applications still awaiting admin review."""
+    try:
+        df = load_sheet("Applications")
+    except Exception:
+        return pd.DataFrame(columns=APPLICATIONS_COLUMNS)
+    if df.empty or "Status" not in df.columns:
+        return pd.DataFrame(columns=APPLICATIONS_COLUMNS)
+    pending = df[df["Status"].astype(str).str.strip().str.lower() == "pending"]
+    return pending.reset_index(drop=True)
+
+
+def approve_application(email: str, tier: str, role: str = "User"):
+    """
+    Approve a pending applicant: add them to the Users tab with the chosen tier
+    (or update their tier if they're already a user), then mark their application Approved.
+    """
+    application = get_latest_application(email)
+    name = application.get("Name", "") if application else ""
+    phone = application.get("Phone", "") if application else ""
+    company = application.get("Company", "") if application else ""
+
+    if get_user_record(email):
+        update_row_by_match("Users", "Email", email, {"Tier": tier})
+    else:
+        user_row = {
+            "Email": email,
+            "Tier": tier,
+            "Name": name,
+            "Phone": phone,
+            "Company": company,
+            "Role": role,
+        }
+        append_row_generic("Users", user_row, USERS_COLUMNS)
+
+    update_row_by_match("Applications", "Email", email, {"Status": "Approved"})
+
+
+def reject_application(email: str):
+    """Mark a pending application as rejected without granting access."""
+    update_row_by_match("Applications", "Email", email, {"Status": "Rejected"})
 
 
 LOGO_PATH = "Assets/logo.png"

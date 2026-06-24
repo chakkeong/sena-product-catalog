@@ -2,7 +2,25 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import load_orders, load_products, load_users, latest_versions_only, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, render_contact_widget, gate_access, is_admin, LOGO_PATH
+from utils import (
+    load_orders,
+    load_products,
+    load_users,
+    latest_versions_only,
+    apply_custom_css,
+    format_currency,
+    render_brand_header,
+    render_sidebar_logo,
+    render_user_sidebar,
+    render_contact_widget,
+    gate_access,
+    is_admin,
+    LOGO_PATH,
+    get_pending_applications,
+    approve_application,
+    reject_application,
+    APPROVABLE_TIERS,
+)
 
 st.set_page_config(
     page_title="Sena Product Catalog",
@@ -51,6 +69,55 @@ for col, label, value in zip(
                 </div>""",
             unsafe_allow_html=True,
         )
+
+st.write("")
+
+# ---------------------------------------------------------------------------
+# Pending Access Requests — admin approves and assigns a tier right here
+# ---------------------------------------------------------------------------
+
+st.subheader("🔑 Pending Access Requests")
+
+try:
+    pending_df = get_pending_applications()
+except Exception as e:
+    pending_df = pd.DataFrame()
+    st.error(f"Could not load applications: {e}")
+
+if pending_df.empty:
+    st.info("No pending access requests right now.")
+else:
+    for _, row in pending_df.iterrows():
+        applicant_email = row.get("Email", "")
+        applicant_timestamp = row.get("Timestamp", "")
+        row_key = f"{applicant_email}_{applicant_timestamp}"
+
+        with st.container(border=True):
+            info_col, tier_col, approve_col, reject_col = st.columns([3, 1.4, 1, 1])
+
+            with info_col:
+                st.markdown(f"**{row.get('Name', '')}** — {applicant_email}")
+                st.caption(f"{row.get('Company', '')} · {row.get('Phone', '')} · Requested {applicant_timestamp}")
+
+            with tier_col:
+                tier_choice = st.selectbox(
+                    "Tier",
+                    APPROVABLE_TIERS,
+                    key=f"tier_{row_key}",
+                    label_visibility="collapsed",
+                )
+
+            with approve_col:
+                if st.button("✅ Approve", key=f"approve_{row_key}", use_container_width=True):
+                    approve_application(applicant_email, tier_choice)
+                    st.success(f"Approved {applicant_email} as {tier_choice}")
+                    st.rerun()
+
+            with reject_col:
+                if st.button("❌ Reject", key=f"reject_{row_key}", use_container_width=True):
+                    reject_application(applicant_email)
+                    st.warning(f"Rejected {applicant_email}")
+                    st.rerun()
 
 st.write("")
 
