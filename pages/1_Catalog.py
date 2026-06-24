@@ -89,11 +89,11 @@ for row_df in rows:
 
             if show_margin:
                 price_section = (
-                    f'<div class="price-row">'
-                    f'<span class="price-your-label">Your Price</span>'
-                    f'<span class="price-tag">{price_str}</span>'
-                    f'<span class="price-retail-label">Retail Price</span>'
-                    f'<span class="price-strike">{format_currency(consumer_price)}</span>'
+                    f'<div style="margin-top:10px;">'
+                    f'<div style="font-size:0.72rem;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:0.03em;">Your Price</div>'
+                    f'<div style="font-size:1.5rem;font-weight:800;color:#4F46E5;line-height:1.3;">{price_str}</div>'
+                    f'<div style="font-size:0.72rem;font-weight:600;color:#9CA3AF;text-transform:uppercase;letter-spacing:0.03em;margin-top:8px;">Retail Price</div>'
+                    f'<div style="font-size:0.95rem;font-weight:600;color:#9CA3AF;text-decoration:line-through;line-height:1.3;">{format_currency(consumer_price)}</div>'
                     f'</div>'
                 )
             else:
