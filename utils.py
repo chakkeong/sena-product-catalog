@@ -256,10 +256,20 @@ def render_login_screen():
     if st.button("Log in with Google", type="primary"):
         st.login()
 
+    st.write("")
+    st.caption("Just browsing? No account needed for guest pricing.")
+    if st.button("Continue as Guest"):
+        st.session_state["guest_mode"] = True
+        st.rerun()
+
 
 def render_pending_or_apply(email: str):
     application = get_latest_application(email)
     status = str(application.get("Status", "")).strip().lower() if application else ""
+
+    if st.button("← Log out / use a different email"):
+        st.session_state.pop("guest_mode", None)
+        st.logout()
 
     if status == "pending":
         st.info(f"Your access request for **{email}** is pending review. You'll get access once approved.")
@@ -288,11 +298,18 @@ def render_pending_or_apply(email: str):
     st.stop()
 
 
+GUEST_RECORD = {"Email": "guest@guest.local", "Name": "Guest", "Tier": "Guest"}
+
+
 def gate_access() -> dict:
     """
-    Require Google login and Users-tab approval before showing any page content.
-    Returns the approved user's record (dict) if successful; otherwise stops the page.
+    Require Google login and Users-tab approval before showing any page content,
+    unless the visitor has chosen to continue as a Guest.
+    Returns a user record (dict) if successful; otherwise stops the page.
     """
+    if st.session_state.get("guest_mode"):
+        return GUEST_RECORD
+
     if not st.user.is_logged_in:
         render_login_screen()
         st.stop()
@@ -309,8 +326,13 @@ def render_user_sidebar(user_record: dict):
     with st.sidebar:
         st.write(f"👤 **{user_record.get('Name') or user_record.get('Email', '')}**")
         st.markdown(f'<span class="tier-badge">{user_record.get("Tier", "")}</span>', unsafe_allow_html=True)
-        if st.button("Log out", use_container_width=True):
-            st.logout()
+        if st.session_state.get("guest_mode"):
+            if st.button("Exit Guest Mode", use_container_width=True):
+                st.session_state.pop("guest_mode", None)
+                st.rerun()
+        else:
+            if st.button("Log out", use_container_width=True):
+                st.logout()
         st.write("---")
 
 
