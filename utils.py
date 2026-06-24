@@ -169,6 +169,28 @@ def append_order_row(row: dict):
     clear_cache()
 
 
+LOGO_PATH = "assets/logo.png"
+
+
+def render_brand_header(title: str, subtitle: str = ""):
+    """Render a consistent branded header with the company logo, title, and subtitle."""
+    logo_col, title_col = st.columns([1, 6])
+    with logo_col:
+        st.image(LOGO_PATH, use_container_width=True)
+    with title_col:
+        st.markdown(f"## {title}")
+        if subtitle:
+            st.caption(subtitle)
+    st.write("")
+
+
+def render_sidebar_logo():
+    """Render a small logo at the top of the sidebar for consistent branding."""
+    with st.sidebar:
+        st.image(LOGO_PATH, use_container_width=True)
+        st.write("---")
+
+
 def format_currency(value) -> str:
     """Format a number as Malaysian Ringgit, e.g. RM 1,234.50"""
     try:

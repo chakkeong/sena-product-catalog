@@ -2,18 +2,17 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import load_orders, load_products, load_users, latest_versions_only, apply_custom_css, format_currency
+from utils import load_orders, load_products, load_users, latest_versions_only, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, LOGO_PATH
 
 st.set_page_config(
     page_title="Sena Product Catalog",
-    page_icon="📊",
+    page_icon=LOGO_PATH,
     layout="wide",
 )
 
 apply_custom_css()
-
-st.title("📊 Sena Product Catalog — Dashboard")
-st.caption("Tiered pricing & purchase order system")
+render_sidebar_logo()
+render_brand_header("Sena Product Catalog — Dashboard", "Tiered pricing & purchase order system")
 
 try:
     products_df = load_products()
