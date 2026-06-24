@@ -365,6 +365,23 @@ def apply_custom_css():
     """Inject shared CSS for a consistent, polished look across all pages."""
     st.markdown(
         """
+        <script>
+        (function() {
+            var meta = document.querySelector('meta[name="color-scheme"]');
+            if (!meta) {
+                meta = document.createElement('meta');
+                meta.name = 'color-scheme';
+                document.head.appendChild(meta);
+            }
+            meta.content = 'light only';
+            document.documentElement.style.colorScheme = 'light';
+        })();
+        </script>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
         <style>
         :root, html, body, .stApp {
             color-scheme: light only;
