@@ -2,14 +2,18 @@ import html
 
 import streamlit as st
 
-from utils import load_products, load_users, get_price_for_tier, drive_thumbnail_url, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, LOGO_PATH
+from utils import load_products, get_price_for_tier, drive_thumbnail_url, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, gate_access, LOGO_PATH
 
 st.set_page_config(page_title="Catalog — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
 render_sidebar_logo()
+user_record = gate_access()
+render_user_sidebar(user_record)
 render_brand_header("Product Catalog")
 
-users_df = load_users()
+selected_email = user_record.get("Email", "")
+selected_tier = user_record.get("Tier", "Guest")
+
 products_df = load_products()
 
 
@@ -27,23 +31,6 @@ def show_large_image(img_url: str, name: str):
 
 
 with st.sidebar:
-    st.header("Buyer")
-    if not users_df.empty and "Email" in users_df.columns:
-        user_options = users_df["Email"].tolist() + ["Guest"]
-    else:
-        user_options = ["Guest"]
-
-    selected_email = st.selectbox("Select buyer email", user_options)
-
-    if selected_email == "Guest":
-        selected_tier = "Guest"
-    else:
-        user_row = users_df[users_df["Email"] == selected_email].iloc[0]
-        selected_tier = user_row.get("Tier", "Guest")
-
-    st.markdown(f'<span class="tier-badge">{clean(selected_tier)}</span>', unsafe_allow_html=True)
-
-    st.write("---")
     st.header("🛒 Cart")
     cart = st.session_state.get("cart", [])
     if cart:
