@@ -160,7 +160,7 @@ def generate_po_pdf(
     header_right = [
         Paragraph("PURCHASE ORDER", styles["po_title"]),
         Spacer(1, 6),
-        Paragraph("<br/>".join(po_meta_lines), styles["po_meta"]),
+        Paragraph("<br/>".join(str(line) for line in po_meta_lines), styles["po_meta"]),
     ]
 
     header_table = Table(
@@ -186,7 +186,7 @@ def generate_po_pdf(
     billed_lines.append(customer_email)
     if customer_phone:
         billed_lines.append(customer_phone)
-    story.append(Paragraph("<br/>".join(billed_lines), styles["body"]))
+    story.append(Paragraph("<br/>".join(str(line) for line in billed_lines), styles["body"]))
     story.append(Spacer(1, 18))
 
     # ----- Line items table -----
@@ -249,7 +249,7 @@ def generate_po_pdf(
     if BANK_DETAILS_LINES:
         story.append(Paragraph("PAYMENT DETAILS", styles["section_label"]))
         story.append(Spacer(1, 3))
-        story.append(Paragraph("<br/>".join(BANK_DETAILS_LINES), styles["body"]))
+        story.append(Paragraph("<br/>".join(str(line) for line in BANK_DETAILS_LINES), styles["body"]))
         story.append(Spacer(1, 18))
 
     # ----- Footer -----
