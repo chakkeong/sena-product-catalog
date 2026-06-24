@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import load_orders, load_products, load_users, latest_versions_only, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, gate_access, is_admin, LOGO_PATH
+from utils import load_orders, load_products, load_users, latest_versions_only, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, render_contact_widget, gate_access, is_admin, LOGO_PATH
 
 st.set_page_config(
     page_title="Sena Product Catalog",
@@ -12,6 +12,7 @@ st.set_page_config(
 
 apply_custom_css()
 render_sidebar_logo()
+render_contact_widget()
 user_record = gate_access()
 render_user_sidebar(user_record)
 

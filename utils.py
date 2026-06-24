@@ -176,6 +176,21 @@ def append_order_row(row: dict):
 
 
 LOGO_PATH = "Assets/logo.png"
+FACEBOOK_URL = "https://www.facebook.com/profile.php?id=61589913425326"
+WHATSAPP_URL = "https://wa.me/60136338923"
+
+
+def render_contact_widget():
+    """Render a floating Facebook + WhatsApp contact widget in the corner of the page."""
+    st.markdown(
+        f"""
+        <div class="contact-widget">
+            <a href="{FACEBOOK_URL}" target="_blank" class="contact-btn contact-fb">f</a>
+            <a href="{WHATSAPP_URL}" target="_blank" class="contact-btn contact-wa">💬</a>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_brand_header(title: str, subtitle: str = ""):
@@ -463,6 +478,31 @@ def apply_custom_css():
             border-radius: 14px;
             border: 1px solid #ECECEF;
         }
+
+        .contact-widget {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 9999;
+        }
+        .contact-btn {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white !important;
+            font-weight: 800;
+            font-size: 1.5rem;
+            text-decoration: none !important;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        }
+        .contact-fb { background: #1877F2; font-family: Georgia, serif; }
+        .contact-wa { background: #25D366; }
         </style>
         """,
         unsafe_allow_html=True,
