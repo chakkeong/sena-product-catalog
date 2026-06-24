@@ -366,6 +366,46 @@ def apply_custom_css():
     st.markdown(
         """
         <script>
+        function labelSidebarToggle() {
+            document.querySelectorAll('button').forEach(function(btn) {
+                if (btn.dataset.menuLabelled) return;
+                var rect = btn.getBoundingClientRect();
+                // The sidebar toggle is always a small icon-only button
+                // pinned near the top-left corner of the page.
+                if (rect.top >= 0 && rect.top < 60 && rect.left >= 0 && rect.left < 60 && rect.width < 60) {
+                    var svg = btn.querySelector('svg');
+                    if (svg) { svg.style.display = 'none'; }
+                    var span = document.createElement('span');
+                    span.textContent = 'Menu';
+                    span.style.fontSize = '14px';
+                    span.style.fontWeight = '700';
+                    span.style.whiteSpace = 'nowrap';
+                    span.style.color = '#ffffff';
+                    btn.appendChild(span);
+                    btn.style.width = 'auto';
+                    btn.style.minWidth = '72px';
+                    btn.style.height = '36px';
+                    btn.style.padding = '0 14px';
+                    btn.style.display = 'flex';
+                    btn.style.alignItems = 'center';
+                    btn.style.justifyContent = 'center';
+                    btn.style.backgroundColor = '#4F46E5';
+                    btn.style.borderRadius = '8px';
+                    btn.dataset.menuLabelled = 'true';
+                }
+            });
+        }
+        var menuLabelObserver = new MutationObserver(labelSidebarToggle);
+        menuLabelObserver.observe(document.body, { childList: true, subtree: true });
+        labelSidebarToggle();
+        setInterval(labelSidebarToggle, 1000);
+        </script>
+        """,
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        """
+        <script>
         (function() {
             var meta = document.querySelector('meta[name="color-scheme"]');
             if (!meta) {
@@ -524,28 +564,6 @@ def apply_custom_css():
         }
         .contact-fb { background: #1877F2; font-family: Georgia, serif; }
         .contact-wa { background: #25D366; }
-
-        [data-testid="collapsedControl"] button[data-testid="stBaseButton-headerNoPadding"] {
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            width: auto !important;
-            min-width: 70px !important;
-            height: 36px !important;
-            padding: 0 14px !important;
-            background-color: #4F46E5 !important;
-            border-radius: 8px !important;
-        }
-        [data-testid="collapsedControl"] button[data-testid="stBaseButton-headerNoPadding"] svg {
-            display: none !important;
-        }
-        [data-testid="collapsedControl"] button[data-testid="stBaseButton-headerNoPadding"]::after {
-            content: "Menu" !important;
-            font-size: 14px !important;
-            font-weight: 700 !important;
-            color: #ffffff !important;
-            white-space: nowrap !important;
-        }
         </style>
         """,
         unsafe_allow_html=True,
