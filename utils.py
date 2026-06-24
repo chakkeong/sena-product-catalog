@@ -169,7 +169,7 @@ def append_order_row(row: dict):
     clear_cache()
 
 
-LOGO_PATH = "assets/logo.png"
+LOGO_PATH = "Assets/logo.png"
 
 
 def render_brand_header(title: str, subtitle: str = ""):
