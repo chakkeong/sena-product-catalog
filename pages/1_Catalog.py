@@ -90,7 +90,9 @@ for row_df in rows:
             if show_margin:
                 price_section = (
                     f'<div class="price-row">'
+                    f'<span class="price-your-label">Your Price</span>'
                     f'<span class="price-tag">{price_str}</span>'
+                    f'<span class="price-retail-label">Retail Price</span>'
                     f'<span class="price-strike">{format_currency(consumer_price)}</span>'
                     f'</div>'
                 )
