@@ -17,6 +17,7 @@ from utils import (
     render_user_sidebar,
     render_contact_widget,
     gate_access,
+    is_admin,
     LOGO_PATH,
 )
 
@@ -34,10 +35,22 @@ if orders_df.empty:
     st.info("No purchase orders yet.")
     st.stop()
 
+# ---------------------------------------------------------------------------
+# Admins see every order; everyone else only sees their own.
+# ---------------------------------------------------------------------------
+viewer_is_admin = is_admin(user_record)
+viewer_email = str(user_record.get("Email", "")).strip().lower()
+
+if not viewer_is_admin:
+    orders_df = orders_df[orders_df["Email"].astype(str).str.strip().str.lower() == viewer_email]
+    if orders_df.empty:
+        st.info("You haven't placed any purchase orders yet.")
+        st.stop()
+
 latest = latest_versions_only(orders_df)
 po_list = sorted(latest["PO"].unique(), reverse=True)
 
-search = st.text_input("🔍 Search by PO number or email")
+search = st.text_input("🔍 Search by PO number or email") if viewer_is_admin else st.text_input("🔍 Search by PO number")
 if search:
     po_list = [po for po in po_list if search.lower() in po.lower()]
 
@@ -52,7 +65,13 @@ for po_number in po_list:
     status = current_row.get("Status", "")
     total = current_row.get("Total", 0)
 
-    with st.expander(f"**{po_number}** — {email} — {format_currency(total)} — v{current_version_num} — {status}"):
+    expander_label = (
+        f"**{po_number}** — {email} — {format_currency(total)} — v{current_version_num} — {status}"
+        if viewer_is_admin
+        else f"**{po_number}** — {format_currency(total)} — v{current_version_num} — {status}"
+    )
+
+    with st.expander(expander_label):
         items_df = pd.DataFrame(items)
         if not items_df.empty:
             display_df = items_df.rename(columns={"name": "Product", "qty": "Qty", "price": "Unit Price", "size": "Size"})
