@@ -15,6 +15,7 @@ from utils import (
     render_brand_header,
     render_sidebar_logo,
     render_user_sidebar,
+    render_contact_widget,
     gate_access,
     LOGO_PATH,
 )
@@ -22,6 +23,7 @@ from utils import (
 st.set_page_config(page_title="Order History — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
 render_sidebar_logo()
+render_contact_widget()
 user_record = gate_access()
 render_user_sidebar(user_record)
 render_brand_header("Purchase Order History")
