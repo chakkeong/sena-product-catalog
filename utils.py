@@ -261,7 +261,7 @@ def render_brand_header(title: str, subtitle: str = ""):
     """Render a consistent branded header with the company logo, title, and subtitle."""
     logo_col, title_col = st.columns([1, 6], vertical_alignment="center")
     with logo_col:
-        st.image(LOGO_PATH, use_container_width=True)
+        st.image(LOGO_PATH, width="stretch")
     with title_col:
         st.markdown(f"## {title}")
         if subtitle:
@@ -272,7 +272,7 @@ def render_brand_header(title: str, subtitle: str = ""):
 def render_sidebar_logo():
     """Render a small logo at the top of the sidebar for consistent branding."""
     with st.sidebar:
-        st.image(LOGO_PATH, use_container_width=True)
+        st.image(LOGO_PATH, width="stretch")
         st.write("---")
 
 
@@ -412,11 +412,11 @@ def render_user_sidebar(user_record: dict):
         st.write(f"👤 **{user_record.get('Name') or user_record.get('Email', '')}**")
         st.markdown(f'<span class="tier-badge">{user_record.get("Tier", "")}</span>', unsafe_allow_html=True)
         if st.session_state.get("guest_mode"):
-            if st.button("Exit Guest Mode", use_container_width=True):
+            if st.button("Exit Guest Mode", width="stretch"):
                 st.session_state.pop("guest_mode", None)
                 st.rerun()
         else:
-            if st.button("Log out", use_container_width=True):
+            if st.button("Log out", width="stretch"):
                 st.logout()
         st.write("---")
 

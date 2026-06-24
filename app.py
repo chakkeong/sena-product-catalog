@@ -108,13 +108,13 @@ else:
                 )
 
             with approve_col:
-                if st.button("✅ Approve", key=f"approve_{row_key}", use_container_width=True):
+                if st.button("✅ Approve", key=f"approve_{row_key}", width="stretch"):
                     approve_application(applicant_email, tier_choice)
                     st.success(f"Approved {applicant_email} as {tier_choice}")
                     st.rerun()
 
             with reject_col:
-                if st.button("❌ Reject", key=f"reject_{row_key}", use_container_width=True):
+                if st.button("❌ Reject", key=f"reject_{row_key}", width="stretch"):
                     reject_application(applicant_email)
                     st.warning(f"Rejected {applicant_email}")
                     st.rerun()
@@ -130,7 +130,7 @@ if not latest_orders.empty:
         fig = px.bar(revenue_by_tier, x="Tier", y="Total", color_discrete_sequence=["#4F46E5"])
         fig.update_yaxes(tickprefix="RM ")
         fig.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=320)
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, width="stretch")
 
     with chart_col2:
         st.subheader("Orders Over Time")
@@ -141,14 +141,14 @@ if not latest_orders.empty:
         fig2.update_xaxes(type="date", tickformat="%b %d")
         fig2.update_yaxes(tick0=0, dtick=1)
         fig2.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=320)
-        st.plotly_chart(fig2, use_container_width=True)
+        st.plotly_chart(fig2, width="stretch")
 
     st.subheader("Recent Purchase Orders")
     display_orders = latest_orders.sort_values("Timestamp", ascending=False)[
         ["PO", "Email", "Tier", "Total", "Status", "Timestamp"]
     ].head(10).copy()
     display_orders["Total"] = display_orders["Total"].apply(format_currency)
-    st.dataframe(display_orders, use_container_width=True, hide_index=True)
+    st.dataframe(display_orders, width="stretch", hide_index=True)
 else:
     st.info("No orders yet. Head to the Catalog page to create your first purchase order.")
 
