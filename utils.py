@@ -502,7 +502,7 @@ def apply_custom_css():
 
         .contact-widget {
             position: fixed;
-            bottom: 24px;
+            bottom: 90px;
             right: 24px;
             display: flex;
             flex-direction: column;
