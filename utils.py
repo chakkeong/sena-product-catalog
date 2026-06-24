@@ -32,6 +32,7 @@ TIER_PRICE_COLUMN = {
 }
 
 ORDERS_COLUMNS = ["PO", "Timestamp", "Email", "Tier", "ItemsJSON", "Total", "Status", "Version"]
+APPLICATIONS_COLUMNS = ["Timestamp", "Name", "Email", "Phone", "Company", "Status"]
 
 
 # ---------------------------------------------------------------------------
@@ -157,16 +158,21 @@ def latest_versions_only(orders_df: pd.DataFrame) -> pd.DataFrame:
 # Writing data
 # ---------------------------------------------------------------------------
 
-def append_order_row(row: dict):
-    """Append one new PO/version row. Never overwrites existing history."""
-    ws = get_spreadsheet().worksheet("Orders")
+def append_row_generic(tab_name: str, row: dict, expected_columns: list[str]):
+    """Append one row to any tab. Creates the header row if the tab is empty."""
+    ws = get_spreadsheet().worksheet(tab_name)
     existing_headers = ws.row_values(1)
     if not existing_headers:
-        ws.append_row(ORDERS_COLUMNS)
-        existing_headers = ORDERS_COLUMNS
+        ws.append_row(expected_columns)
+        existing_headers = expected_columns
     ordered_row = [row.get(col, "") for col in existing_headers]
     ws.append_row(ordered_row, value_input_option="USER_ENTERED")
     clear_cache()
+
+
+def append_order_row(row: dict):
+    """Append one new PO/version row. Never overwrites existing history."""
+    append_row_generic("Orders", row, ORDERS_COLUMNS)
 
 
 LOGO_PATH = "Assets/logo.png"
@@ -201,6 +207,111 @@ def format_currency(value) -> str:
 
 def timestamp_now() -> str:
     return datetime.now().strftime("%-m/%-d/%Y %H:%M")
+
+
+# ---------------------------------------------------------------------------
+# Login & access control
+# ---------------------------------------------------------------------------
+
+def get_user_record(email: str):
+    """Look up an approved user by email in the Users tab. Returns a dict or None."""
+    users_df = load_users()
+    if users_df.empty or "Email" not in users_df.columns or not email:
+        return None
+    matches = users_df[users_df["Email"].astype(str).str.strip().str.lower() == email.strip().lower()]
+    if matches.empty:
+        return None
+    return matches.iloc[0].to_dict()
+
+
+def submit_application(name: str, email: str, phone: str, company: str):
+    row = {
+        "Timestamp": timestamp_now(),
+        "Name": name,
+        "Email": email,
+        "Phone": phone,
+        "Company": company,
+        "Status": "Pending",
+    }
+    append_row_generic("Applications", row, APPLICATIONS_COLUMNS)
+
+
+def get_latest_application(email: str):
+    """Return the most recent application row for this email, or None."""
+    try:
+        df = load_sheet("Applications")
+    except Exception:
+        return None
+    if df.empty or "Email" not in df.columns or not email:
+        return None
+    matches = df[df["Email"].astype(str).str.strip().str.lower() == email.strip().lower()]
+    if matches.empty:
+        return None
+    return matches.iloc[-1].to_dict()
+
+
+def render_login_screen():
+    st.markdown("## 🔒 Sena Product Catalog")
+    st.write("Please log in with your Google account to continue.")
+    if st.button("Log in with Google", type="primary"):
+        st.login()
+
+
+def render_pending_or_apply(email: str):
+    application = get_latest_application(email)
+    status = str(application.get("Status", "")).strip().lower() if application else ""
+
+    if status == "pending":
+        st.info(f"Your access request for **{email}** is pending review. You'll get access once approved.")
+        st.stop()
+
+    if status == "rejected":
+        st.warning("Your previous access request was not approved. Please contact us if you believe this is a mistake.")
+        st.stop()
+
+    st.subheader("Request Access")
+    st.caption(f"Signed in as **{email}**. You don't have catalog access yet — submit a request below.")
+    with st.form("access_request_form"):
+        name = st.text_input("Full Name")
+        phone = st.text_input("Phone Number")
+        company = st.text_input("Company")
+        submitted = st.form_submit_button("Submit Request")
+
+    if submitted:
+        if not name or not phone or not company:
+            st.warning("Please fill in all fields.")
+        else:
+            submit_application(name, email, phone, company)
+            st.success("Your request has been submitted! You'll get access once approved.")
+            st.rerun()
+
+    st.stop()
+
+
+def gate_access() -> dict:
+    """
+    Require Google login and Users-tab approval before showing any page content.
+    Returns the approved user's record (dict) if successful; otherwise stops the page.
+    """
+    if not st.user.is_logged_in:
+        render_login_screen()
+        st.stop()
+
+    email = st.user.email
+    user_record = get_user_record(email)
+    if user_record:
+        return user_record
+
+    render_pending_or_apply(email)
+
+
+def render_user_sidebar(user_record: dict):
+    with st.sidebar:
+        st.write(f"👤 **{user_record.get('Name') or user_record.get('Email', '')}**")
+        st.markdown(f'<span class="tier-badge">{user_record.get("Tier", "")}</span>', unsafe_allow_html=True)
+        if st.button("Log out", use_container_width=True):
+            st.logout()
+        st.write("---")
 
 
 # ---------------------------------------------------------------------------
