@@ -2,14 +2,13 @@ import json
 
 import streamlit as st
 
-from utils import generate_po_number, append_order_row, timestamp_now, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, render_contact_widget, gate_access, LOGO_PATH
+from utils import generate_po_number, append_order_row, timestamp_now, apply_custom_css, format_currency, render_brand_header, render_top_navbar, render_contact_widget, gate_access, LOGO_PATH
 
 st.set_page_config(page_title="Cart — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
-render_sidebar_logo()
 render_contact_widget()
 user_record = gate_access()
-render_user_sidebar(user_record)
+render_top_navbar(user_record, st.session_state["nav_pages"])
 render_brand_header("Cart & Checkout")
 
 if "cart" not in st.session_state:
@@ -41,12 +40,12 @@ st.markdown(f"## Total: {format_currency(total)}")
 
 col_a, col_b = st.columns(2)
 with col_a:
-    if st.button("Clear Cart", use_container_width=True):
+    if st.button("Clear Cart", width="stretch"):
         st.session_state.cart = []
         st.rerun()
 
 with col_b:
-    if st.button("✅ Submit Purchase Order", type="primary", use_container_width=True):
+    if st.button("✅ Submit Purchase Order", type="primary", width="stretch"):
         po_number = generate_po_number()
         timestamp = timestamp_now()
         email = cart[0].get("email", "guest@example.com")

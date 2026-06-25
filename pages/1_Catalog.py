@@ -2,14 +2,13 @@ import html
 
 import streamlit as st
 
-from utils import load_products, get_price_for_tier, drive_thumbnail_url, apply_custom_css, format_currency, render_brand_header, render_sidebar_logo, render_user_sidebar, render_contact_widget, gate_access, is_admin, LOGO_PATH
+from utils import load_products, get_price_for_tier, drive_thumbnail_url, apply_custom_css, format_currency, render_brand_header, render_top_navbar, render_contact_widget, gate_access, is_admin, LOGO_PATH
 
 st.set_page_config(page_title="Catalog — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
-render_sidebar_logo()
 render_contact_widget()
 user_record = gate_access()
-render_user_sidebar(user_record)
+render_top_navbar(user_record, st.session_state["nav_pages"])
 render_brand_header("Product Catalog")
 
 selected_email = user_record.get("Email", "")
@@ -27,30 +26,36 @@ def clean(text) -> str:
 
 @st.dialog("Product Image", width="large")
 def show_large_image(img_url: str, name: str):
-    st.image(img_url, use_container_width=True)
+    st.image(img_url, width="stretch")
     st.caption(name)
 
 
 admin_mode = is_admin(user_record)
+tier_options = ["Tier1", "Tier2", "Tier3", "Consumer", "Guest"]
 
-with st.sidebar:
+util_col1, util_col2 = st.columns([3, 2], vertical_alignment="center")
+with util_col1:
     if admin_mode:
-        st.header("👑 Admin Preview")
-        tier_options = ["Tier1", "Tier2", "Tier3", "Consumer", "Guest"]
         default_idx = tier_options.index(own_tier) if own_tier in tier_options else 0
-        selected_tier = st.selectbox("View pricing as tier", tier_options, index=default_idx)
-        st.write("---")
+        selected_tier = st.selectbox(
+            "👑 Admin Preview — view pricing as tier", tier_options, index=default_idx,
+        )
     else:
         selected_tier = own_tier
 
-    st.header("🛒 Cart")
+with util_col2:
     cart = st.session_state.get("cart", [])
     if cart:
         cart_total = sum(item["price"] * item["qty"] for item in cart)
-        st.write(f"{len(cart)} item(s) — {format_currency(cart_total)}")
-        st.page_link("pages/2_Cart.py", label="Go to Cart →", icon="🛒")
+        cart_label_col, cart_link_col = st.columns([2, 1], vertical_alignment="center")
+        with cart_label_col:
+            st.markdown(f"🛒 **{len(cart)} item(s)** — {format_currency(cart_total)}")
+        with cart_link_col:
+            st.page_link("pages/2_Cart.py", label="Go to Cart →", icon="🛒")
     else:
-        st.write("Cart is empty")
+        st.caption("🛒 Cart is empty")
+
+st.write("---")
 
 search_term = st.text_input("🔍 Search products", placeholder="Search by name or description...")
 
@@ -117,12 +122,12 @@ for row_df in rows:
             btn_col, qty_col = st.columns([1, 1])
             with btn_col:
                 if img_url:
-                    if st.button("🔍 View larger", key=f"viewlarge_{product.get('ProductID')}", use_container_width=True):
+                    if st.button("🔍 View larger", key=f"viewlarge_{product.get('ProductID')}", width="stretch"):
                         show_large_image(img_url, name)
             with qty_col:
                 qty = st.number_input("Qty", min_value=1, value=1, step=1, key=qty_key, label_visibility="collapsed")
 
-            if st.button("Add to Cart", key=f"add_{product.get('ProductID')}", use_container_width=True):
+            if st.button("Add to Cart", key=f"add_{product.get('ProductID')}", width="stretch"):
                 st.session_state.cart.append({
                     "id": product.get("ProductID"),
                     "name": product.get("Name"),

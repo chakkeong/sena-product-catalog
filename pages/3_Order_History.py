@@ -13,11 +13,10 @@ from utils import (
     apply_custom_css,
     format_currency,
     render_brand_header,
-    render_sidebar_logo,
-    render_user_sidebar,
     render_contact_widget,
     gate_access,
     is_admin,
+    render_top_navbar,
     get_user_record,
     LOGO_PATH,
 )
@@ -25,10 +24,9 @@ from pdf_generator import generate_po_pdf
 
 st.set_page_config(page_title="Order History — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 apply_custom_css()
-render_sidebar_logo()
 render_contact_widget()
 user_record = gate_access()
-render_user_sidebar(user_record)
+render_top_navbar(user_record, st.session_state["nav_pages"])
 render_brand_header("Purchase Order History")
 
 orders_df = load_orders()
