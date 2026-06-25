@@ -30,7 +30,7 @@ st.set_page_config(
 apply_custom_css()
 render_contact_widget()
 user_record = gate_access()
-render_top_navbar(user_record, st.session_state["nav_pages"])
+render_top_navbar(user_record, st.session_state.get("nav_pages", []))
 
 if not is_admin(user_record):
     st.warning("🔒 This dashboard is restricted to administrators. Use the sidebar to go to Catalog instead.")

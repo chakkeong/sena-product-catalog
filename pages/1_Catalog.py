@@ -8,7 +8,7 @@ st.set_page_config(page_title="Catalog — Sena Product Catalog", page_icon=LOGO
 apply_custom_css()
 render_contact_widget()
 user_record = gate_access()
-render_top_navbar(user_record, st.session_state["nav_pages"])
+render_top_navbar(user_record, st.session_state.get("nav_pages", []))
 render_brand_header("Product Catalog")
 
 selected_email = user_record.get("Email", "")

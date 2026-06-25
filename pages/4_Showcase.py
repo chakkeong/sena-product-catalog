@@ -6,7 +6,7 @@ from utils import gate_access, render_top_navbar, render_contact_widget, LOGO_PA
 st.set_page_config(page_title="Showcase — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 render_contact_widget()
 user_record = gate_access()
-render_top_navbar(user_record, st.session_state["nav_pages"])
+render_top_navbar(user_record, st.session_state.get("nav_pages", []))
 
 SHOWCASE_HTML = """
 <!DOCTYPE html>
