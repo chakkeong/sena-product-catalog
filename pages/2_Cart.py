@@ -24,16 +24,18 @@ if not cart:
 st.subheader("Items in cart")
 
 for i, item in enumerate(cart):
-    thumb_col, c1, c2, c3, c4, c5, c6, c7 = st.columns([0.8, 2.0, 0.5, 0.6, 0.5, 1.2, 1.2, 0.6])
+    thumb_col, c1, c2, c3, c4, c5, c6, c7 = st.columns(
+        [1.4, 1.8, 0.5, 0.6, 0.5, 1.1, 1.1, 0.6], vertical_alignment="center"
+    )
 
     with thumb_col:
         image_url = item.get("image_url", "")
         if image_url:
-            st.image(image_url, width=64)
+            st.image(image_url, width=120)
         else:
             st.markdown(
-                """<div style="width:64px;height:64px;border-radius:8px;background:#F3F4F6;
-                display:flex;align-items:center;justify-content:center;font-size:0.65rem;
+                """<div style="width:120px;height:120px;border-radius:10px;background:#F3F4F6;
+                display:flex;align-items:center;justify-content:center;font-size:0.75rem;
                 color:#9CA3AF;text-align:center;">No image</div>""",
                 unsafe_allow_html=True,
             )
