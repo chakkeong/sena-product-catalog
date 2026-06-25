@@ -146,6 +146,7 @@ for row_df in rows:
                         "price": price,
                         "email": selected_email,
                         "tier": selected_tier,
+                        "image_url": img_url,
                     })
                 st.toast(f"Added {product.get('Name')} to cart", icon="🛒")
                 st.rerun()

@@ -24,7 +24,20 @@ if not cart:
 st.subheader("Items in cart")
 
 for i, item in enumerate(cart):
-    c1, c2, c3, c4, c5, c6, c7 = st.columns([2.6, 0.5, 0.6, 0.5, 1.3, 1.3, 0.6])
+    thumb_col, c1, c2, c3, c4, c5, c6, c7 = st.columns([0.8, 2.0, 0.5, 0.6, 0.5, 1.2, 1.2, 0.6])
+
+    with thumb_col:
+        image_url = item.get("image_url", "")
+        if image_url:
+            st.image(image_url, width=64)
+        else:
+            st.markdown(
+                """<div style="width:64px;height:64px;border-radius:8px;background:#F3F4F6;
+                display:flex;align-items:center;justify-content:center;font-size:0.65rem;
+                color:#9CA3AF;text-align:center;">No image</div>""",
+                unsafe_allow_html=True,
+            )
+
     c1.write(f"**{item['name']}**  \n_{item.get('size', '')}_")
 
     if c2.button("−", key=f"minus_{i}"):
