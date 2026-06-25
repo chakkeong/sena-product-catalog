@@ -8,6 +8,7 @@ user_record = gate_access()
 viewer_is_admin = is_admin(user_record)
 
 pages = build_nav_pages(viewer_is_admin)
+st.session_state["nav_pages"] = pages
 
 # "hidden" — we render our own professional navbar (logo + links + user +
 # logout) inside each page via render_top_navbar(), instead of Streamlit's
