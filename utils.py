@@ -589,25 +589,25 @@ def apply_custom_css():
             color-scheme: light only;
             forced-color-adjust: none;
         }
-        .stApp { background-color: #EAE0CC; }
+        .stApp { background-color: #2B1D14; }
 
-        h1, h2, h3 { color: #3B2A1C; font-weight: 700; }
+        h1, h2, h3 { color: #F3EAD8; font-weight: 700; }
 
         .kpi-card {
-            background: #FBF7EC;
+            background: #3A2A1C;
             border-radius: 16px;
             padding: 1.3rem 1.5rem;
-            border: 1px solid #DCCBA8;
-            box-shadow: 0 2px 12px rgba(59,42,28,0.07);
+            border: 1px solid #5C3A21;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.2);
         }
-        .kpi-label { font-size: 0.82rem; color: #8C6B3D; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 0.35rem; }
-        .kpi-value { font-size: 1.9rem; font-weight: 800; color: #3B2A1C; }
+        .kpi-label { font-size: 0.82rem; color: #C9A66B; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; margin-bottom: 0.35rem; }
+        .kpi-value { font-size: 1.9rem; font-weight: 800; color: #F3EAD8; }
 
         .product-card {
-            background: #FBF7EC;
+            background: #3A2A1C;
             border-radius: 18px;
-            border: 1px solid #DCCBA8;
-            box-shadow: 0 2px 10px rgba(59,42,28,0.06);
+            border: 1px solid #5C3A21;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.18);
             overflow: hidden;
             transition: box-shadow 0.15s ease;
         }
@@ -616,7 +616,7 @@ def apply_custom_css():
             height: 200px;
             overflow: hidden;
             border-radius: 14px;
-            background: #F1E8D4;
+            background: #2B1D14;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -629,7 +629,7 @@ def apply_custom_css():
         .price-tag {
             font-size: 1.5rem;
             font-weight: 800;
-            color: #9C7A22;
+            color: #C9A227;
             margin-top: 10px;
         }
         .price-row {
@@ -648,7 +648,7 @@ def apply_custom_css():
         .price-retail-label {
             font-size: 0.7rem;
             font-weight: 600;
-            color: #A8916D;
+            color: #D8CBB4;
             text-transform: uppercase;
             letter-spacing: 0.03em;
             margin-top: 6px;
@@ -656,7 +656,7 @@ def apply_custom_css():
         .price-strike {
             font-size: 0.95rem;
             font-weight: 600;
-            color: #A8916D;
+            color: #D8CBB4;
             text-decoration: line-through;
         }
         .size-badge-row {
@@ -665,8 +665,8 @@ def apply_custom_css():
             display: block;
         }
         .size-badge {
-            background: #F1E8D4;
-            color: #9C7A22;
+            background: #5C3A21;
+            color: #C9A66B;
             padding: 3px 10px;
             border-radius: 12px;
             font-size: 0.72rem;
@@ -674,8 +674,8 @@ def apply_custom_css():
             display: inline-block;
         }
         .tier-badge {
-            background: #ECFDF5;
-            color: #059669;
+            background: #4B5D45;
+            color: #F3EAD8;
             padding: 3px 10px;
             border-radius: 12px;
             font-size: 0.78rem;
@@ -684,8 +684,8 @@ def apply_custom_css():
         }
 
         section[data-testid="stSidebar"] {
-            background-color: #FBF7EC;
-            border-right: 1px solid #DCCBA8;
+            background-color: #3A2A1C;
+            border-right: 1px solid #5C3A21;
         }
 
         div[data-testid="stButton"] button {
@@ -700,7 +700,7 @@ def apply_custom_css():
 
         [data-testid="stExpander"] {
             border-radius: 14px;
-            border: 1px solid #DCCBA8;
+            border: 1px solid #5C3A21;
         }
         </style>
         """,
