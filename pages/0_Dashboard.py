@@ -125,7 +125,7 @@ if not latest_orders.empty:
     with chart_col1:
         st.subheader("Revenue by Tier")
         revenue_by_tier = latest_orders.groupby("Tier")["Total"].sum().reset_index().sort_values("Total", ascending=False)
-        fig = px.bar(revenue_by_tier, x="Tier", y="Total", color_discrete_sequence=["#4F46E5"])
+        fig = px.bar(revenue_by_tier, x="Tier", y="Total", color_discrete_sequence=["#C9A227"])
         fig.update_yaxes(tickprefix="RM ")
         fig.update_layout(margin=dict(l=10, r=10, t=10, b=10), height=320)
         st.plotly_chart(fig, width="stretch")

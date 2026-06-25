@@ -34,9 +34,9 @@ for i, item in enumerate(cart):
             st.image(image_url, width=120)
         else:
             st.markdown(
-                """<div style="width:120px;height:120px;border-radius:10px;background:#F3F4F6;
+                """<div style="width:120px;height:120px;border-radius:10px;background:#F1E8D4;
                 display:flex;align-items:center;justify-content:center;font-size:0.75rem;
-                color:#9CA3AF;text-align:center;">No image</div>""",
+                color:#A8916D;text-align:center;">No image</div>""",
                 unsafe_allow_html=True,
             )
 
