@@ -90,16 +90,16 @@ for row_df in rows:
             consumer_price = float(product.get("ConsumerPrice", 0) or 0)
             show_margin = selected_tier in ("Tier1", "Tier2", "Tier3") and consumer_price > price
 
-            image_html = f'<img src="{img_url}" />' if img_url else '<span style="color:#A8916D;font-size:0.8rem;">No image</span>'
+            image_html = f'<img src="{img_url}" />' if img_url else '<span style="color:#D8CBB4;font-size:0.8rem;">No image</span>'
             size_html = f'<span class="size-badge">{size}</span>' if size else ""
 
             if show_margin:
                 price_section = (
                     f'<div style="margin-top:10px;">'
                     f'<div style="font-size:0.72rem;font-weight:700;color:#059669;text-transform:uppercase;letter-spacing:0.03em;">Your Price</div>'
-                    f'<div style="font-size:1.5rem;font-weight:800;color:#9C7A22;line-height:1.3;">{price_str}</div>'
-                    f'<div style="font-size:0.72rem;font-weight:600;color:#A8916D;text-transform:uppercase;letter-spacing:0.03em;margin-top:8px;">Retail Price</div>'
-                    f'<div style="font-size:0.95rem;font-weight:600;color:#A8916D;text-decoration:line-through;line-height:1.3;">{format_currency(consumer_price)}</div>'
+                    f'<div style="font-size:1.5rem;font-weight:800;color:#C9A227;line-height:1.3;">{price_str}</div>'
+                    f'<div style="font-size:0.72rem;font-weight:600;color:#D8CBB4;text-transform:uppercase;letter-spacing:0.03em;margin-top:8px;">Retail Price</div>'
+                    f'<div style="font-size:0.95rem;font-weight:600;color:#D8CBB4;text-decoration:line-through;line-height:1.3;">{format_currency(consumer_price)}</div>'
                     f'</div>'
                 )
             else:
@@ -109,8 +109,8 @@ for row_df in rows:
                 f'<div class="product-card"><div style="padding:10px;">'
                 f'<div class="product-image-wrap">{image_html}</div>'
                 f'<div style="padding:12px 4px 4px 4px;">'
-                f'<div style="font-weight:700;font-size:1.02rem;color:#3B2A1C;margin-bottom:2px;">{name}</div>'
-                f'<div style="color:#6B5840;font-size:0.85rem;min-height:2.2em;margin-bottom:8px;">{description}</div>'
+                f'<div style="font-weight:700;font-size:1.02rem;color:#F3EAD8;margin-bottom:2px;">{name}</div>'
+                f'<div style="color:#D8CBB4;font-size:0.85rem;min-height:2.2em;margin-bottom:8px;">{description}</div>'
                 f'<div class="size-badge-row">{size_html}</div>'
                 f'{price_section}'
                 f'</div></div></div>'
