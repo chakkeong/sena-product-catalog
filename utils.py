@@ -245,13 +245,37 @@ WHATSAPP_URL = "https://wa.me/60136338923"
 
 
 def render_contact_widget():
-    """Render a floating Facebook + WhatsApp contact widget in the corner of the page."""
+    """Render a floating Facebook + WhatsApp contact widget, fixed to the
+    real browser viewport (not Streamlit's element wrapper, which can apply
+    a CSS transform during mount and break position:fixed)."""
     st.markdown(
         f"""
-        <div class="contact-widget">
-            <a href="{FACEBOOK_URL}" target="_blank" class="contact-btn contact-fb">f</a>
-            <a href="{WHATSAPP_URL}" target="_blank" class="contact-btn contact-wa">💬</a>
-        </div>
+        <script>
+        (function() {{
+            if (document.getElementById('sena-contact-widget')) return;
+            var widget = document.createElement('div');
+            widget.id = 'sena-contact-widget';
+            widget.style.position = 'fixed';
+            widget.style.bottom = '90px';
+            widget.style.right = '24px';
+            widget.style.display = 'flex';
+            widget.style.flexDirection = 'column';
+            widget.style.gap = '12px';
+            widget.style.zIndex = '999999';
+            widget.innerHTML =
+                '<a href="{FACEBOOK_URL}" target="_blank" rel="noopener" ' +
+                'style="width:52px;height:52px;border-radius:50%;display:flex;' +
+                'align-items:center;justify-content:center;background:#1877F2;' +
+                'color:#fff;font-weight:800;font-size:1.5rem;font-family:Georgia,serif;' +
+                'text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);">f</a>' +
+                '<a href="{WHATSAPP_URL}" target="_blank" rel="noopener" ' +
+                'style="width:52px;height:52px;border-radius:50%;display:flex;' +
+                'align-items:center;justify-content:center;background:#25D366;' +
+                'color:#fff;font-size:1.5rem;text-decoration:none;' +
+                'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
+            document.body.appendChild(widget);
+        }})();
+        </script>
         """,
         unsafe_allow_html=True,
     )
@@ -677,31 +701,6 @@ def apply_custom_css():
             border-radius: 14px;
             border: 1px solid #ECECEF;
         }
-
-        .contact-widget {
-            position: fixed;
-            bottom: 90px;
-            right: 24px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            z-index: 9999;
-        }
-        .contact-btn {
-            width: 52px;
-            height: 52px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white !important;
-            font-weight: 800;
-            font-size: 1.5rem;
-            text-decoration: none !important;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.25);
-        }
-        .contact-fb { background: #1877F2; font-family: Georgia, serif; }
-        .contact-wa { background: #25D366; }
         </style>
         """,
         unsafe_allow_html=True,
