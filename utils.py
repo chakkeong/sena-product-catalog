@@ -258,14 +258,10 @@ def render_contact_widget():
 
 
 def render_brand_header(title: str, subtitle: str = ""):
-    """Render a consistent branded header with the company logo, title, and subtitle."""
-    logo_col, title_col = st.columns([1, 6], vertical_alignment="center")
-    with logo_col:
-        st.image(LOGO_PATH, width="stretch")
-    with title_col:
-        st.markdown(f"## {title}")
-        if subtitle:
-            st.caption(subtitle)
+    """Render the page title and subtitle. The logo now lives in the top navbar."""
+    st.markdown(f"## {title}")
+    if subtitle:
+        st.caption(subtitle)
     st.write("")
 
 
@@ -274,6 +270,93 @@ def render_sidebar_logo():
     with st.sidebar:
         st.image(LOGO_PATH, width="stretch")
         st.write("---")
+
+
+def build_nav_pages(viewer_is_admin: bool) -> list:
+    """
+    Single source of truth for the app's page list, used both by the router
+    (app.py, for st.navigation) and by render_top_navbar (for the matching
+    page_link buttons), so the two never drift out of sync.
+    """
+    pages = []
+    if viewer_is_admin:
+        pages.append(st.Page("pages/0_Dashboard.py", title="Dashboard", icon="📊", default=True))
+    pages.append(st.Page("pages/1_Catalog.py", title="Catalog", icon="🛋️", default=not viewer_is_admin))
+    pages.append(st.Page("pages/2_Cart.py", title="Cart", icon="🛒"))
+    pages.append(st.Page("pages/3_Order_History.py", title="Order History", icon="📦"))
+    return pages
+
+
+def render_top_navbar(user_record: dict, pages: list):
+    """
+    Render one professional horizontal navbar — logo, page links, the current
+    user's name/tier, and a logout control — replacing the sidebar entirely.
+    Call this near the top of every page, right after gate_access().
+    """
+    st.markdown(
+        """
+        <style>
+        section[data-testid="stSidebar"] { display: none !important; }
+        [data-testid="collapsedControl"] { display: none !important; }
+
+        .sena-navbar-rule {
+            border-bottom: 1px solid #ECECEF;
+            margin: 0 -1rem 1.4rem -1rem;
+        }
+        .sena-user-chip {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            font-size: 0.9rem;
+            color: #111827;
+            white-space: nowrap;
+        }
+        div[data-testid="stPageLink"] a {
+            border-radius: 8px;
+            font-weight: 600;
+            color: #374151 !important;
+        }
+        div[data-testid="stPageLink"] a:hover {
+            background-color: #F3F4F6;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    logo_col, nav_col, user_col, logout_col = st.columns(
+        [1.3, 3.6, 1.8, 0.9], vertical_alignment="center"
+    )
+
+    with logo_col:
+        st.image(LOGO_PATH, width=140)
+
+    with nav_col:
+        link_cols = st.columns(len(pages))
+        for link_col, page in zip(link_cols, pages):
+            with link_col:
+                st.page_link(page, label=page.title, icon=page.icon)
+
+    with user_col:
+        name = user_record.get("Name") or user_record.get("Email", "")
+        tier = user_record.get("Tier", "")
+        st.markdown(
+            f"""<div class="sena-user-chip">👤 <b>{name}</b>
+                <span class="tier-badge">{tier}</span></div>""",
+            unsafe_allow_html=True,
+        )
+
+    with logout_col:
+        if st.session_state.get("guest_mode"):
+            if st.button("Exit", width="stretch", key="navbar_exit_guest"):
+                st.session_state.pop("guest_mode", None)
+                st.rerun()
+        else:
+            if st.button("Log out", width="stretch", key="navbar_logout"):
+                st.logout()
+
+    st.markdown('<div class="sena-navbar-rule"></div>', unsafe_allow_html=True)
 
 
 def format_currency(value) -> str:
@@ -427,46 +510,6 @@ def render_user_sidebar(user_record: dict):
 
 def apply_custom_css():
     """Inject shared CSS for a consistent, polished look across all pages."""
-    st.markdown(
-        """
-        <script>
-        function labelSidebarToggle() {
-            document.querySelectorAll('button').forEach(function(btn) {
-                if (btn.dataset.menuLabelled) return;
-                var rect = btn.getBoundingClientRect();
-                // The sidebar toggle is always a small icon-only button
-                // pinned near the top-left corner of the page.
-                if (rect.top >= 0 && rect.top < 60 && rect.left >= 0 && rect.left < 60 && rect.width < 60) {
-                    var svg = btn.querySelector('svg');
-                    if (svg) { svg.style.display = 'none'; }
-                    var span = document.createElement('span');
-                    span.textContent = 'Menu';
-                    span.style.fontSize = '14px';
-                    span.style.fontWeight = '700';
-                    span.style.whiteSpace = 'nowrap';
-                    span.style.color = '#ffffff';
-                    btn.appendChild(span);
-                    btn.style.width = 'auto';
-                    btn.style.minWidth = '72px';
-                    btn.style.height = '36px';
-                    btn.style.padding = '0 14px';
-                    btn.style.display = 'flex';
-                    btn.style.alignItems = 'center';
-                    btn.style.justifyContent = 'center';
-                    btn.style.backgroundColor = '#4F46E5';
-                    btn.style.borderRadius = '8px';
-                    btn.dataset.menuLabelled = 'true';
-                }
-            });
-        }
-        var menuLabelObserver = new MutationObserver(labelSidebarToggle);
-        menuLabelObserver.observe(document.body, { childList: true, subtree: true });
-        labelSidebarToggle();
-        setInterval(labelSidebarToggle, 1000);
-        </script>
-        """,
-        unsafe_allow_html=True,
-    )
     st.markdown(
         """
         <script>
