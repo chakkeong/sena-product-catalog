@@ -300,9 +300,27 @@ def render_top_navbar(user_record: dict, pages: list):
         section[data-testid="stSidebar"] { display: none !important; }
         [data-testid="collapsedControl"] { display: none !important; }
 
+        /* Scope everything to the row that actually contains our page links,
+           so this never affects unrelated column rows elsewhere in the app. */
+        div[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) {
+            background-color: #2B1D14;
+            border-radius: 14px;
+            padding: 14px 20px;
+        }
+        /* Let nav links hug each other instead of stretching across the
+           whole nav column, which was leaving a large empty gap before
+           the user/logout area. */
+        div[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) div[data-testid="stHorizontalBlock"] {
+            gap: 6px !important;
+            justify-content: flex-start !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) div[data-testid="stHorizontalBlock"] > div {
+            flex: 0 0 auto !important;
+            width: auto !important;
+        }
+
         .sena-navbar-rule {
-            border-bottom: 1px solid #ECECEF;
-            margin: 0 -1rem 1.4rem -1rem;
+            margin: 0 0 1.4rem 0;
         }
         .sena-user-chip {
             display: flex;
@@ -310,16 +328,25 @@ def render_top_navbar(user_record: dict, pages: list):
             justify-content: flex-end;
             gap: 8px;
             font-size: 0.9rem;
-            color: #111827;
+            color: #F3EAD8 !important;
             white-space: nowrap;
         }
-        div[data-testid="stPageLink"] a {
+        div[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) div[data-testid="stPageLink"] a {
             border-radius: 8px;
             font-weight: 600;
-            color: #374151 !important;
+            color: #F3EAD8 !important;
         }
-        div[data-testid="stPageLink"] a:hover {
-            background-color: #F3F4F6;
+        div[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) div[data-testid="stPageLink"] a:hover {
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+        div[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) button {
+            background-color: transparent !important;
+            border: 1px solid #5C3A21 !important;
+            color: #F3EAD8 !important;
+        }
+        div[data-testid="stHorizontalBlock"]:has([data-testid="stPageLink"]) button:hover {
+            border-color: #C9A227 !important;
+            color: #C9A227 !important;
         }
         </style>
         """,
@@ -327,7 +354,7 @@ def render_top_navbar(user_record: dict, pages: list):
     )
 
     logo_col, nav_col, user_col, logout_col = st.columns(
-        [1.3, 3.6, 1.8, 0.9], vertical_alignment="center"
+        [1.1, 2.6, 1.6, 0.8], vertical_alignment="center"
     )
 
     with logo_col:
