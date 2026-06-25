@@ -284,6 +284,7 @@ def build_nav_pages(viewer_is_admin: bool) -> list:
     pages.append(st.Page("pages/1_Catalog.py", title="Catalog", icon="🛋️", default=not viewer_is_admin))
     pages.append(st.Page("pages/2_Cart.py", title="Cart", icon="🛒"))
     pages.append(st.Page("pages/3_Order_History.py", title="Order History", icon="📦"))
+    pages.append(st.Page("pages/4_Showcase.py", title="Showcase", icon="✨"))
     return pages
 
 
