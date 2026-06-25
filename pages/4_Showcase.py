@@ -19,8 +19,8 @@ SHOWCASE_HTML = """
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    background-color: #EAE0CC;
-    color: #3B2A1C;
+    background-color: #2B1D14;
+    color: #F3EAD8;
     font-family: 'Work Sans', sans-serif;
   }
   .display { font-family: 'Fraunces', serif; }
@@ -28,63 +28,63 @@ SHOWCASE_HTML = """
 
   header.nav { display: flex; align-items: center; justify-content: space-between; padding-top: 32px; }
   .logo { font-size: 1.25rem; letter-spacing: 0.02em; }
-  .logo-sub { color: #8C6B3D; font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; }
-  nav a { color: #6B5840; text-decoration: none; margin-left: 28px; font-size: 0.9rem; }
+  .logo-sub { color: #C9A66B; font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; }
+  nav a { color: #D8CBB4; text-decoration: none; margin-left: 28px; font-size: 0.9rem; }
   nav a:focus-visible { outline: 2px solid #C9A227; outline-offset: 3px; }
 
   .hero { padding: 56px 0 40px; }
-  .eyebrow { color: #9C7A22; font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 20px; }
+  .eyebrow { color: #C9A227; font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 20px; }
   h1 { font-size: 2.6rem; line-height: 1.08; margin: 0 0 24px; max-width: 640px; }
-  .lead { color: #6B5840; font-size: 1.05rem; max-width: 540px; margin: 0; }
+  .lead { color: #D8CBB4; font-size: 1.05rem; max-width: 540px; margin: 0; }
 
   .tabs { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 0 32px; }
   .tab {
     padding: 10px 20px; border-radius: 999px; font-size: 0.9rem; font-weight: 500;
-    background: transparent; color: #6B5840; border: 1px solid #DCCBA8; cursor: pointer;
+    background: transparent; color: #D8CBB4; border: 1px solid #5C3A21; cursor: pointer;
     display: inline-flex; align-items: center; gap: 8px; transition: background 0.15s, color 0.15s;
   }
   .tab.active { background: #C9A227; color: #2B1D14; border-color: #C9A227; }
   .tab:focus-visible { outline: 2px solid #C9A227; outline-offset: 3px; }
 
   .concept-card {
-    background: #F1E8D4; border: 1px solid #DCCBA8; border-radius: 16px;
+    background: #3A2A1C; border: 1px solid #5C3A21; border-radius: 16px;
     padding: 32px; display: flex; gap: 32px; flex-wrap: wrap; padding-bottom: 64px;
   }
   .concept-side { width: 240px; flex-shrink: 0; }
   .grain { width: 100%; height: 150px; border-radius: 12px; margin-bottom: 16px; }
   .concept-title { font-size: 1.5rem; margin-bottom: 8px; }
-  .concept-mood { color: #6B5840; font-size: 0.9rem; }
+  .concept-mood { color: #D8CBB4; font-size: 0.9rem; }
 
   .products { flex: 1; min-width: 260px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 640px) { .products { grid-template-columns: 1fr; } }
-  .product-card { background: #FBF7EC; border: 1px solid #DCCBA8; border-radius: 12px; padding: 20px; }
+  .product-card { background: #2B1D14; border: 1px solid #5C3A21; border-radius: 12px; padding: 20px; }
   .badge {
     display: inline-block; font-size: 0.75rem; padding: 4px 10px; border-radius: 999px;
     background: #4B5D45; color: #F3EAD8; margin-bottom: 16px;
   }
   .product-name { font-size: 1.1rem; margin-bottom: 4px; }
-  .product-spec { font-size: 0.75rem; color: #8C6B3D; margin-bottom: 16px; }
+  .product-spec { font-size: 0.75rem; color: #C9A66B; margin-bottom: 16px; }
   .product-bottom { display: flex; align-items: flex-end; justify-content: space-between; }
   .product-price { font-size: 1.5rem; }
-  .view-link { color: #9C7A22; font-size: 0.9rem; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+  .view-link { color: #C9A227; font-size: 0.9rem; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
 
-  .collection { padding: 64px 0; border-top: 1px solid #DCCBA8; }
+  .collection { padding: 64px 0; border-top: 1px solid #3A2A1C; }
   .collection-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 40px; }
   .collection-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
   @media (max-width: 900px) { .collection-grid { grid-template-columns: repeat(2, 1fr); } }
   @media (max-width: 560px) { .collection-grid { grid-template-columns: 1fr; } }
-  .item-card { background: #F1E8D4; border: 1px solid #DCCBA8; border-radius: 12px; padding: 20px; transition: transform 0.15s; }
+  .item-card { background: #3A2A1C; border: 1px solid #5C3A21; border-radius: 12px; padding: 20px; transition: transform 0.15s; }
   .item-card:hover { transform: translateY(-4px); }
   .item-grain { width: 100%; height: 112px; border-radius: 8px; margin-bottom: 16px; background-color: #6B4226; background-image: repeating-linear-gradient(115deg, #5C3A21 0px, #5C3A21 2px, transparent 2px, transparent 10px); }
-  .item-kind { font-size: 0.75rem; color: #8C6B3D; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+  .item-kind { font-size: 0.75rem; color: #C9A66B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
   .item-name { font-size: 1.1rem; margin-bottom: 4px; }
-  .item-note { font-size: 0.9rem; color: #6B5840; margin-bottom: 12px; }
-  .item-price { font-size: 0.9rem; font-weight: 600; color: #9C7A22; }
+  .item-note { font-size: 0.9rem; color: #D8CBB4; margin-bottom: 12px; }
+  .item-price { font-size: 0.9rem; font-weight: 600; color: #C9A227; }
 
-  footer { padding: 48px 0; border-top: 1px solid #DCCBA8; }
+  footer { padding: 48px 0; border-top: 1px solid #3A2A1C; }
   .footer-inner { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
   .footer-name { font-size: 1.1rem; margin-bottom: 4px; }
-  .footer-addr, .footer-contact { color: #6B5840; font-size: 0.9rem; }
+  .footer-addr, .footer-contact { color: #D8CBB4; font-size: 0.9rem; }
   .footer-contact { text-align: right; }
   .footer-reg { font-size: 0.75rem; color: #8C6239; margin-top: 8px; }
 </style>
@@ -117,7 +117,7 @@ SHOWCASE_HTML = """
     <section class="collection" id="collection">
       <div class="collection-head">
         <h2 class="display" style="font-size:1.8rem;margin:0;">The Collection</h2>
-        <span style="color:#8C6B3D;font-size:0.9rem;">4 pieces in stock</span>
+        <span style="color:#C9A66B;font-size:0.9rem;">4 pieces in stock</span>
       </div>
       <div class="collection-grid">
         <div class="item-card">
