@@ -113,41 +113,42 @@ for po_number in po_list:
                     for it in v_items:
                         st.write(f"  • {it.get('name')} × {it.get('qty')} @ {format_currency(it.get('price'))}")
 
-        st.write("---")
-        st.markdown("**Amend this order**")
-        st.caption("Editing quantities and saving creates a new version — the original is preserved in history.")
+        if viewer_is_admin:
+            st.write("---")
+            st.markdown("**Amend this order**")
+            st.caption("Editing quantities and saving creates a new version — the original is preserved in history.")
 
-        edited_items = []
-        for idx, it in enumerate(items):
-            c1, c2, c3 = st.columns([3, 1, 1])
-            c1.write(it.get("name", ""))
-            new_qty = c2.number_input(
-                "Qty", min_value=0, value=int(it.get("qty", 0)), step=1,
-                key=f"amend_qty_{po_number}_{idx}", label_visibility="collapsed",
-            )
-            c3.write(format_currency(float(it.get("price", 0)) * new_qty))
-            edited_items.append({
-                "id": it.get("id"), "name": it.get("name"),
-                "price": float(it.get("price", 0)), "qty": new_qty, "size": it.get("size", ""),
-            })
+            edited_items = []
+            for idx, it in enumerate(items):
+                c1, c2, c3 = st.columns([3, 1, 1])
+                c1.write(it.get("name", ""))
+                new_qty = c2.number_input(
+                    "Qty", min_value=0, value=int(it.get("qty", 0)), step=1,
+                    key=f"amend_qty_{po_number}_{idx}", label_visibility="collapsed",
+                )
+                c3.write(format_currency(float(it.get("price", 0)) * new_qty))
+                edited_items.append({
+                    "id": it.get("id"), "name": it.get("name"),
+                    "price": float(it.get("price", 0)), "qty": new_qty, "size": it.get("size", ""),
+                })
 
-        if st.button("💾 Save Amendment", key=f"save_{po_number}"):
-            kept_items = [i for i in edited_items if i["qty"] > 0]
-            if not kept_items:
-                st.warning("All quantities are zero — nothing to save.")
-            else:
-                next_version = get_next_version(orders_df, po_number)
-                new_total = sum(i["price"] * i["qty"] for i in kept_items)
-                row = {
-                    "PO": po_number,
-                    "Timestamp": timestamp_now(),
-                    "Email": email,
-                    "Tier": current_row.get("Tier", ""),
-                    "ItemsJSON": json.dumps(kept_items),
-                    "Total": new_total,
-                    "Status": "Amended",
-                    "Version": next_version,
-                }
-                append_order_row(row)
-                st.success(f"{po_number} updated to version {next_version}")
-                st.rerun()
+            if st.button("💾 Save Amendment", key=f"save_{po_number}"):
+                kept_items = [i for i in edited_items if i["qty"] > 0]
+                if not kept_items:
+                    st.warning("All quantities are zero — nothing to save.")
+                else:
+                    next_version = get_next_version(orders_df, po_number)
+                    new_total = sum(i["price"] * i["qty"] for i in kept_items)
+                    row = {
+                        "PO": po_number,
+                        "Timestamp": timestamp_now(),
+                        "Email": email,
+                        "Tier": current_row.get("Tier", ""),
+                        "ItemsJSON": json.dumps(kept_items),
+                        "Total": new_total,
+                        "Status": "Amended",
+                        "Version": next_version,
+                    }
+                    append_order_row(row)
+                    st.success(f"{po_number} updated to version {next_version}")
+                    st.rerun()
