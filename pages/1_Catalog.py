@@ -128,15 +128,26 @@ for row_df in rows:
                 qty = st.number_input("Qty", min_value=1, value=1, step=1, key=qty_key, label_visibility="collapsed")
 
             if st.button("Add to Cart", key=f"add_{product.get('ProductID')}", width="stretch"):
-                st.session_state.cart.append({
-                    "id": product.get("ProductID"),
-                    "name": product.get("Name"),
-                    "size": product.get("Size/Measurement", ""),
-                    "qty": qty,
-                    "price": price,
-                    "email": selected_email,
-                    "tier": selected_tier,
-                })
+                existing_item = next(
+                    (
+                        cart_item for cart_item in st.session_state.cart
+                        if cart_item["id"] == product.get("ProductID") and cart_item["tier"] == selected_tier
+                    ),
+                    None,
+                )
+                if existing_item:
+                    existing_item["qty"] += qty
+                else:
+                    st.session_state.cart.append({
+                        "id": product.get("ProductID"),
+                        "name": product.get("Name"),
+                        "size": product.get("Size/Measurement", ""),
+                        "qty": qty,
+                        "price": price,
+                        "email": selected_email,
+                        "tier": selected_tier,
+                    })
                 st.toast(f"Added {product.get('Name')} to cart", icon="🛒")
+                st.rerun()
 
             st.write("")

@@ -24,12 +24,24 @@ if not cart:
 st.subheader("Items in cart")
 
 for i, item in enumerate(cart):
-    c1, c2, c3, c4, c5 = st.columns([3, 1, 1.5, 1.5, 0.8])
+    c1, c2, c3, c4, c5, c6, c7 = st.columns([2.6, 0.5, 0.6, 0.5, 1.3, 1.3, 0.6])
     c1.write(f"**{item['name']}**  \n_{item.get('size', '')}_")
-    c2.write(f"Qty: {item['qty']}")
-    c3.write(f"{format_currency(item['price'])} each")
-    c4.write(f"**{format_currency(item['price'] * item['qty'])}**")
-    if c5.button("✕", key=f"remove_{i}"):
+
+    if c2.button("−", key=f"minus_{i}"):
+        if item["qty"] > 1:
+            item["qty"] -= 1
+        st.rerun()
+
+    c3.markdown(f"<div style='text-align:center;padding-top:6px;'>{item['qty']}</div>", unsafe_allow_html=True)
+
+    if c4.button("+", key=f"plus_{i}"):
+        item["qty"] += 1
+        st.rerun()
+
+    c5.write(f"{format_currency(item['price'])} each")
+    c6.write(f"**{format_currency(item['price'] * item['qty'])}**")
+
+    if c7.button("✕", key=f"remove_{i}"):
         cart.pop(i)
         st.rerun()
 
