@@ -361,10 +361,13 @@ def render_top_navbar(user_record: dict, pages: list):
         st.image(LOGO_PATH, width=140)
 
     with nav_col:
-        link_cols = st.columns(len(pages))
-        for link_col, page in zip(link_cols, pages):
-            with link_col:
-                st.page_link(page, label=page.title, icon=page.icon)
+        if pages:
+            link_cols = st.columns(len(pages))
+            for link_col, page in zip(link_cols, pages):
+                with link_col:
+                    st.page_link(page, label=page.title, icon=page.icon)
+        else:
+            st.caption("Navigation unavailable — please refresh the page.")
 
     with user_col:
         name = user_record.get("Name") or user_record.get("Email", "")
