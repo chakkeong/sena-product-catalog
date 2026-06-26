@@ -1,14 +1,89 @@
+import json
+
 import streamlit as st
 import streamlit.components.v1 as components
 
-from utils import gate_access, render_top_navbar, render_contact_widget, LOGO_PATH
+from utils import (
+    gate_access,
+    render_top_navbar,
+    render_contact_widget,
+    load_products,
+    drive_thumbnail_url,
+    LOGO_PATH,
+)
 
 st.set_page_config(page_title="Showcase — Sena Product Catalog", page_icon=LOGO_PATH, layout="wide")
 render_contact_widget()
 user_record = gate_access()
 render_top_navbar(user_record, st.session_state.get("nav_pages", []))
 
-SHOWCASE_HTML = """
+# ---------------------------------------------------------------------------
+# Pull real products from the Google Sheet and group them by concept.
+# A product belongs to a concept if its Name contains that concept's keyword
+# (e.g. "Sofa 3 Seater Homey" matches the "Homey" concept).
+# ---------------------------------------------------------------------------
+
+CONCEPT_DEFS = [
+    {
+        "id": "homey",
+        "label": "Homey",
+        "keyword": "homey",
+        "mood": (
+            "Warm, deep-seated pieces for a living room you don't want to leave. "
+            "Soft edges and generous cushioning, in woods that feel lived-in from day one."
+        ),
+    },
+    {
+        "id": "insta",
+        "label": "Insta",
+        "keyword": "insta",
+        "mood": (
+            "Clean lines and a light palette, built to photograph as well as it sits. "
+            "The pieces your living room deserves to be seen in."
+        ),
+    },
+    {
+        "id": "modern",
+        "label": "Modern",
+        "keyword": "modern",
+        "mood": (
+            "Tight, structured silhouettes for smaller spaces that still feel deliberate. "
+            "Less footprint, same presence."
+        ),
+    },
+]
+
+try:
+    products_df = load_products()
+except Exception as e:
+    products_df = None
+    st.error(f"Could not load products from the Google Sheet: {e}")
+
+concepts_data = []
+if products_df is not None and not products_df.empty and "Name" in products_df.columns:
+    for cdef in CONCEPT_DEFS:
+        matches = products_df[
+            products_df["Name"].astype(str).str.contains(cdef["keyword"], case=False, na=False)
+        ]
+        products = []
+        for _, row in matches.iterrows():
+            products.append({
+                "name": str(row.get("Name", "")),
+                "size": str(row.get("Size/Measurement", "") or ""),
+                "price": float(row.get("ConsumerPrice", 0) or 0),
+                "image": drive_thumbnail_url(str(row.get("ImageURL", "") or "")),
+            })
+        concepts_data.append({
+            "id": cdef["id"],
+            "label": cdef["label"],
+            "mood": cdef["mood"],
+            "hero_image": products[0]["image"] if products else "",
+            "products": products,
+        })
+
+CONCEPTS_JSON = json.dumps(concepts_data)
+
+SHOWCASE_HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -52,13 +127,19 @@ SHOWCASE_HTML = """
     padding: 32px; display: flex; gap: 32px; flex-wrap: wrap; padding-bottom: 64px;
   }
   .concept-side { width: 240px; flex-shrink: 0; }
-  .grain { width: 100%; height: 150px; border-radius: 12px; margin-bottom: 16px; }
+  .hero-img, .grain { width: 100%; height: 150px; border-radius: 12px; margin-bottom: 16px; object-fit: cover; display: block; }
   .concept-title { font-size: 1.5rem; margin-bottom: 8px; }
   .concept-mood { color: #D8CBB4; font-size: 0.9rem; }
 
   .products { flex: 1; min-width: 260px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   @media (max-width: 640px) { .products { grid-template-columns: 1fr; } }
   .product-card { background: #2B1D14; border: 1px solid #5C3A21; border-radius: 12px; padding: 20px; }
+  .product-thumb { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; margin-bottom: 14px; display: block; }
+  .product-thumb-placeholder {
+    width: 100%; height: 130px; border-radius: 8px; margin-bottom: 14px;
+    background: #3A2A1C; display: flex; align-items: center; justify-content: center;
+    color: #D8CBB4; font-size: 0.75rem;
+  }
   .badge {
     display: inline-block; font-size: 0.75rem; padding: 4px 10px; border-radius: 999px;
     background: #4B5D45; color: #F3EAD8; margin-bottom: 16px;
@@ -68,23 +149,9 @@ SHOWCASE_HTML = """
   .product-bottom { display: flex; align-items: flex-end; justify-content: space-between; }
   .product-price { font-size: 1.5rem; color: #C9A227; }
   .view-link { color: #C9A227; font-size: 0.9rem; font-weight: 500; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+  .empty-note { color: #D8CBB4; font-size: 0.9rem; padding: 20px 0; }
 
-  .collection { padding: 64px 0; border-top: 1px solid #3A2A1C; }
-  .collection-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 40px; }
-  .collection-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
-  @media (max-width: 900px) { .collection-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (max-width: 560px) { .collection-grid { grid-template-columns: 1fr; } }
-  .item-card {
-    background: #3A2A1C; border: 1px solid #5C3A21; border-radius: 12px; padding: 20px; transition: transform 0.15s;
-  }
-  .item-card:hover { transform: translateY(-4px); }
-  .item-grain { width: 100%; height: 112px; border-radius: 8px; margin-bottom: 16px; background-color: #6B4226; background-image: repeating-linear-gradient(115deg, #5C3A21 0px, #5C3A21 2px, transparent 2px, transparent 10px); }
-  .item-kind { font-size: 0.75rem; color: #C9A66B; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
-  .item-name { font-size: 1.1rem; margin-bottom: 4px; }
-  .item-note { font-size: 0.9rem; color: #D8CBB4; margin-bottom: 12px; }
-  .item-price { font-size: 0.9rem; font-weight: 600; color: #C9A227; }
-
-  footer { padding: 48px 0; border-top: 1px solid #3A2A1C; }
+  footer { padding: 48px 0; border-top: 1px solid #3A2A1C; margin-top: 24px; }
   .footer-inner { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
   .footer-name { font-size: 1.1rem; margin-bottom: 4px; }
   .footer-addr, .footer-contact { color: #D8CBB4; font-size: 0.9rem; }
@@ -101,7 +168,6 @@ SHOWCASE_HTML = """
       </div>
       <nav>
         <a href="#concepts">Concepts</a>
-        <a href="#collection">Collection</a>
         <a href="#visit">Visit</a>
       </nav>
     </header>
@@ -109,49 +175,12 @@ SHOWCASE_HTML = """
     <section class="hero">
       <div class="eyebrow">Ready-made, by concept</div>
       <h1 class="display">Every piece is finished and ready. You're choosing a feeling, not a spec sheet.</h1>
-      <p class="lead">Sena doesn't build to order — we hold three ready-made concepts in stock, each with its own wood, fabric, and mood already decided. Pick the one that's you.</p>
+      <p class="lead">Sena doesn't build to order — we hold ready-made concepts in stock, each with its own wood, fabric, and mood already decided. Pick the one that's you.</p>
     </section>
 
     <section id="concepts">
       <div class="tabs" id="tabs"></div>
       <div class="concept-card" id="concept-card"></div>
-    </section>
-
-    <section class="collection" id="collection">
-      <div class="collection-head">
-        <h2 class="display" style="font-size:1.8rem;margin:0;">The Collection</h2>
-        <span style="color:#C9A66B;font-size:0.9rem;">4 pieces in stock</span>
-      </div>
-      <div class="collection-grid">
-        <div class="item-card">
-          <div class="item-grain"></div>
-          <div class="item-kind">3-seater</div>
-          <div class="item-name display">The Maluri Sofa</div>
-          <div class="item-note">Walnut frame, deep-seat cushions</div>
-          <div class="item-price">RM 4,200</div>
-        </div>
-        <div class="item-card">
-          <div class="item-grain"></div>
-          <div class="item-kind">6-seater</div>
-          <div class="item-name display">Anzen Dining Table</div>
-          <div class="item-note">Solid oak, hand-waxed finish</div>
-          <div class="item-price">RM 3,850</div>
-        </div>
-        <div class="item-card">
-          <div class="item-grain"></div>
-          <div class="item-kind">lounge</div>
-          <div class="item-name display">Kepong Armchair</div>
-          <div class="item-note">Teak frame, brass stud trim</div>
-          <div class="item-price">RM 2,100</div>
-        </div>
-        <div class="item-card">
-          <div class="item-grain"></div>
-          <div class="item-kind">entryway</div>
-          <div class="item-name display">Bukit Console</div>
-          <div class="item-note">Oak, brass inlay handles</div>
-          <div class="item-price">RM 1,650</div>
-        </div>
-      </div>
     </section>
 
     <footer id="visit">
@@ -175,46 +204,13 @@ SHOWCASE_HTML = """
   </div>
 
 <script>
-  const CONCEPTS = [
-    {
-      id: "homey", label: "Homey",
-      mood: "Warm, deep-seated pieces for a living room you don't want to leave.",
-      swatch: "#6B4226", grain: "#52301B",
-      products: [
-        { name: "Sofa 3-Seater Homey", spec: "Walnut frame · Linen upholstery · 210 × 90 × 85 cm", price: 2000 },
-        { name: "Coffee Table Homey", spec: "Walnut · Hand-waxed finish · 110 × 55 × 42 cm", price: 680 },
-      ],
-    },
-    {
-      id: "insta", label: "Insta",
-      mood: "Clean lines and a light palette — built to photograph as well as it sits.",
-      swatch: "#C9A66B", grain: "#B08F52",
-      products: [
-        { name: "Sofa 3-Seater Insta", spec: "Oak frame · Bouclé upholstery · 215 × 88 × 80 cm", price: 2000 },
-        { name: "Side Table Insta", spec: "Oak · Matte finish · 45 × 45 × 50 cm", price: 420 },
-      ],
-    },
-    {
-      id: "modern", label: "Modern",
-      mood: "Tight, structured silhouettes for smaller spaces that still feel deliberate.",
-      swatch: "#8C6239", grain: "#6E4A28",
-      products: [
-        { name: "Sofa 2-Seater Modern", spec: "Teak frame · Structured weave · 175 × 85 × 78 cm", price: 1200 },
-        { name: "Console Modern", spec: "Teak · Brass inlay handles · 120 × 35 × 75 cm", price: 950 },
-      ],
-    },
-  ];
+  const CONCEPTS = __CONCEPTS_JSON__;
 
   const CHECK_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>';
-  const ARROW_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>';
 
-  function fmtRM(v) { return "RM " + v.toLocaleString("en-MY"); }
+  function fmtRM(v) { return "RM " + Number(v).toLocaleString("en-MY"); }
 
-  function grainStyle(color, grain) {
-    return `background-color:${color};background-image:repeating-linear-gradient(115deg, ${grain} 0px, ${grain} 2px, transparent 2px, transparent 9px);`;
-  }
-
-  let activeId = "homey";
+  let activeId = CONCEPTS.length ? CONCEPTS[0].id : null;
 
   function renderTabs() {
     const tabsEl = document.getElementById("tabs");
@@ -235,24 +231,39 @@ SHOWCASE_HTML = """
   function renderConceptCard() {
     const concept = CONCEPTS.find(c => c.id === activeId);
     const cardEl = document.getElementById("concept-card");
+    if (!concept) {
+      cardEl.innerHTML = '<div class="empty-note">No concepts found. Check that your Products sheet has items named with "Homey", "Insta", or "Modern".</div>';
+      return;
+    }
+
+    const heroBlock = concept.hero_image
+      ? `<img class="hero-img" src="${concept.hero_image}" />`
+      : `<div class="grain" style="background:#5C3A21;"></div>`;
+
+    const productsBlock = concept.products.length
+      ? concept.products.map(p => `
+          <div class="product-card">
+            ${p.image
+              ? `<img class="product-thumb" src="${p.image}" />`
+              : `<div class="product-thumb-placeholder">No image</div>`}
+            <span class="badge">Ready to ship</span>
+            <div class="product-name display">${p.name}</div>
+            <div class="product-spec">${p.size || '&nbsp;'}</div>
+            <div class="product-bottom">
+              <div class="product-price display">${fmtRM(p.price)}</div>
+            </div>
+          </div>
+        `).join("")
+      : '<div class="empty-note">No ready-made pieces tagged for this concept yet.</div>';
+
     cardEl.innerHTML = `
       <div class="concept-side">
-        <div class="grain" style="${grainStyle(concept.swatch, concept.grain)}"></div>
+        ${heroBlock}
         <div class="concept-title display">${concept.label}</div>
         <div class="concept-mood">${concept.mood}</div>
       </div>
       <div class="products">
-        ${concept.products.map(p => `
-          <div class="product-card">
-            <span class="badge">Ready to ship</span>
-            <div class="product-name display">${p.name}</div>
-            <div class="product-spec">${p.spec}</div>
-            <div class="product-bottom">
-              <div class="product-price display">${fmtRM(p.price)}</div>
-              <a class="view-link" href="#collection">View ${ARROW_SVG}</a>
-            </div>
-          </div>
-        `).join("")}
+        ${productsBlock}
       </div>
     `;
   }
@@ -264,4 +275,6 @@ SHOWCASE_HTML = """
 </html>
 """
 
-components.html(SHOWCASE_HTML, height=1900, scrolling=True)
+SHOWCASE_HTML = SHOWCASE_HTML_TEMPLATE.replace("__CONCEPTS_JSON__", CONCEPTS_JSON)
+
+components.html(SHOWCASE_HTML, height=1500, scrolling=True)
