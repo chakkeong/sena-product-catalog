@@ -53,6 +53,15 @@ CONCEPT_DEFS = [
     },
 ]
 
+# Curated moodboard photos for each concept's hero image (uploaded to Drive,
+# now public). These take priority over the dynamic "first product photo"
+# fallback below, since they show the full styled room rather than a single item.
+CONCEPT_HERO_OVERRIDE = {
+    "homey": "https://drive.google.com/thumbnail?id=17W_pwUonR3nnyDPsvM-i2eVZAGQi6CWM&sz=w1200",
+    "insta": "https://drive.google.com/thumbnail?id=1PS05QJK9LhU_M-iN7wNRMY-nYvtC_xXu&sz=w1200",
+    "modern": "https://drive.google.com/thumbnail?id=1knwkTSdYVUbQBAYA98cK0gs0ORT3Ryv_&sz=w1200",
+}
+
 try:
     products_df = load_products()
 except Exception as e:
@@ -77,7 +86,7 @@ if products_df is not None and not products_df.empty and "Name" in products_df.c
             "id": cdef["id"],
             "label": cdef["label"],
             "mood": cdef["mood"],
-            "hero_image": products[0]["image"] if products else "",
+            "hero_image": CONCEPT_HERO_OVERRIDE.get(cdef["id"]) or (products[0]["image"] if products else ""),
             "products": products,
         })
 
@@ -126,8 +135,8 @@ SHOWCASE_HTML_TEMPLATE = """
     background: #3A2A1C; border: 1px solid #5C3A21; border-radius: 16px;
     padding: 32px; display: flex; gap: 32px; flex-wrap: wrap; padding-bottom: 64px;
   }
-  .concept-side { width: 240px; flex-shrink: 0; }
-  .hero-img, .grain { width: 100%; height: 150px; border-radius: 12px; margin-bottom: 16px; object-fit: cover; display: block; }
+  .concept-side { width: 300px; flex-shrink: 0; }
+  .hero-img, .grain { width: 100%; height: 210px; border-radius: 12px; margin-bottom: 16px; object-fit: cover; display: block; }
   .concept-title { font-size: 1.5rem; margin-bottom: 8px; }
   .concept-mood { color: #D8CBB4; font-size: 0.9rem; }
 
@@ -270,6 +279,24 @@ SHOWCASE_HTML_TEMPLATE = """
 
   renderTabs();
   renderConceptCard();
+
+  // Auto-resize this iframe to match its real content height, so the page
+  // never has two competing scroll areas (which feels "draggy" on mobile,
+  // since touch has to decide whether to scroll the iframe or the page).
+  function resizeToContent() {
+    if (window.frameElement) {
+      window.frameElement.style.height = document.documentElement.scrollHeight + 'px';
+    }
+  }
+  window.addEventListener('load', resizeToContent);
+  new ResizeObserver(resizeToContent).observe(document.body);
+  // Concept switches change content height without firing 'load' or a
+  // size-changing layout shift the observer always catches in time, so
+  // nudge it again shortly after every tab click too.
+  document.getElementById('tabs').addEventListener('click', () => {
+    setTimeout(resizeToContent, 50);
+  });
+  resizeToContent();
 </script>
 </body>
 </html>
@@ -277,4 +304,4 @@ SHOWCASE_HTML_TEMPLATE = """
 
 SHOWCASE_HTML = SHOWCASE_HTML_TEMPLATE.replace("__CONCEPTS_JSON__", CONCEPTS_JSON)
 
-components.html(SHOWCASE_HTML, height=1500, scrolling=True)
+components.html(SHOWCASE_HTML, height=600, scrolling=False)
