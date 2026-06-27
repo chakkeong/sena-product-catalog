@@ -58,7 +58,7 @@ CONCEPT_DEFS = [
 # fallback below, since they show the full styled room rather than a single item.
 CONCEPT_HERO_OVERRIDE = {
     "homey": "https://drive.google.com/thumbnail?id=17W_pwUonR3nnyDPsvM-i2eVZAGQi6CWM&sz=w1200",
-    "insta": "https://drive.google.com/thumbnail?id=1PS05QJK9LhU_M-iN7wNRMY-nYvtC_xXu&sz=w1200",
+    "insta": "https://drive.google.com/thumbnail?id=1mYeQCx08U7RVhdpNvyT8ELXto4j4ytpy&sz=w1200",
     "modern": "https://drive.google.com/thumbnail?id=1knwkTSdYVUbQBAYA98cK0gs0ORT3Ryv_&sz=w1200",
 }
 
@@ -119,7 +119,7 @@ SHOWCASE_HTML_TEMPLATE = """
 
   .hero { padding: 56px 0 40px; }
   .eyebrow { color: #C9A227; font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 20px; }
-  h1 { font-size: 2.6rem; line-height: 1.08; margin: 0 0 24px; max-width: 640px; }
+  h1 { font-size: clamp(1.75rem, 5vw + 1rem, 2.6rem); line-height: 1.1; margin: 0 0 24px; max-width: 640px; }
   .lead { color: #D8CBB4; font-size: 1.05rem; max-width: 540px; margin: 0; }
 
   .tabs { display: flex; gap: 12px; flex-wrap: wrap; padding: 0 0 32px; }
@@ -133,21 +133,53 @@ SHOWCASE_HTML_TEMPLATE = """
 
   .concept-card {
     background: #3A2A1C; border: 1px solid #5C3A21; border-radius: 16px;
-    padding: 32px; display: flex; gap: 32px; flex-wrap: wrap; padding-bottom: 64px;
+    padding: 20px; display: flex; flex-direction: column; gap: 24px; padding-bottom: 40px;
   }
-  .concept-side { width: 300px; flex-shrink: 0; }
-  .hero-img, .grain { width: 100%; height: 210px; border-radius: 12px; margin-bottom: 16px; object-fit: cover; display: block; }
-  .concept-title { font-size: 1.5rem; margin-bottom: 8px; }
+  .concept-side { width: 100%; flex-shrink: 0; }
+  .hero-img, .grain {
+    width: 100%; aspect-ratio: 16 / 10; height: auto;
+    border-radius: 12px; margin-bottom: 16px; object-fit: cover; display: block;
+  }
+  .concept-title { font-size: 1.4rem; margin-bottom: 8px; }
   .concept-mood { color: #D8CBB4; font-size: 0.9rem; }
 
-  .products { flex: 1; min-width: 260px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 640px) { .products { grid-template-columns: 1fr; } }
-  .product-card { background: #2B1D14; border: 1px solid #5C3A21; border-radius: 12px; padding: 20px; }
-  .product-thumb { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; margin-bottom: 14px; display: block; }
+  .products {
+    flex: 1; min-width: 0; display: grid;
+    grid-template-columns: 1fr; gap: 14px;
+  }
+  .product-card { background: #2B1D14; border: 1px solid #5C3A21; border-radius: 12px; padding: 16px; }
+  .product-thumb, .product-thumb-placeholder {
+    width: 100%; aspect-ratio: 4 / 3; height: auto;
+    object-fit: cover; border-radius: 8px; margin-bottom: 14px; display: block;
+  }
   .product-thumb-placeholder {
-    width: 100%; height: 130px; border-radius: 8px; margin-bottom: 14px;
     background: #3A2A1C; display: flex; align-items: center; justify-content: center;
     color: #D8CBB4; font-size: 0.75rem;
+  }
+
+  /* --- Small phones: tighten card padding a touch --- */
+  @media (max-width: 380px) {
+    .concept-card { padding: 16px; }
+  }
+
+  /* --- Large phones / small tablets: 2-up product grid --- */
+  @media (min-width: 540px) {
+    .products { grid-template-columns: 1fr 1fr; gap: 16px; }
+  }
+
+  /* --- Tablets and up: hero + products sit side-by-side --- */
+  @media (min-width: 768px) {
+    .concept-card { flex-direction: row; gap: 32px; padding: 28px; padding-bottom: 56px; }
+    .concept-side { width: 260px; }
+    .hero-img, .grain { aspect-ratio: 4 / 5; }
+  }
+
+  /* --- Laptops and up: roomier card, wider side panel, 3-up products --- */
+  @media (min-width: 1024px) {
+    .concept-card { padding: 32px; padding-bottom: 64px; }
+    .concept-side { width: 300px; }
+    .products { grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
+    .concept-title { font-size: 1.5rem; }
   }
   .badge {
     display: inline-block; font-size: 0.75rem; padding: 4px 10px; border-radius: 999px;
@@ -246,14 +278,14 @@ SHOWCASE_HTML_TEMPLATE = """
     }
 
     const heroBlock = concept.hero_image
-      ? `<img class="hero-img" src="${concept.hero_image}" />`
+      ? `<img class="hero-img" src="${concept.hero_image}" loading="lazy" decoding="async" alt="${concept.label} concept" />`
       : `<div class="grain" style="background:#5C3A21;"></div>`;
 
     const productsBlock = concept.products.length
       ? concept.products.map(p => `
           <div class="product-card">
             ${p.image
-              ? `<img class="product-thumb" src="${p.image}" />`
+              ? `<img class="product-thumb" src="${p.image}" loading="lazy" decoding="async" alt="${p.name}" />`
               : `<div class="product-thumb-placeholder">No image</div>`}
             <span class="badge">Ready to ship</span>
             <div class="product-name display">${p.name}</div>
