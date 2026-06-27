@@ -138,7 +138,8 @@ SHOWCASE_HTML_TEMPLATE = """
   .concept-side { width: 100%; flex-shrink: 0; }
   .hero-img, .grain {
     width: 100%; aspect-ratio: 16 / 10; height: auto;
-    border-radius: 12px; margin-bottom: 16px; object-fit: cover; display: block;
+    border-radius: 12px; margin-bottom: 16px; object-fit: cover;
+    object-position: top center; display: block;
   }
   .concept-title { font-size: 1.4rem; margin-bottom: 8px; }
   .concept-mood { color: #D8CBB4; font-size: 0.9rem; }
@@ -170,14 +171,13 @@ SHOWCASE_HTML_TEMPLATE = """
   /* --- Tablets and up: hero + products sit side-by-side --- */
   @media (min-width: 768px) {
     .concept-card { flex-direction: row; gap: 32px; padding: 28px; padding-bottom: 56px; }
-    .concept-side { width: 260px; }
-    .hero-img, .grain { aspect-ratio: 4 / 5; }
+    .concept-side { width: 320px; }
   }
 
   /* --- Laptops and up: roomier card, wider side panel, 3-up products --- */
   @media (min-width: 1024px) {
     .concept-card { padding: 32px; padding-bottom: 64px; }
-    .concept-side { width: 300px; }
+    .concept-side { width: 360px; }
     .products { grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
     .concept-title { font-size: 1.5rem; }
   }
