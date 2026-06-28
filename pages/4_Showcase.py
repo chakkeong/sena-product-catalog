@@ -110,12 +110,9 @@ SHOWCASE_HTML_TEMPLATE = """
   .display { font-family: 'Fraunces', serif; }
   .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
 
-  header.nav { display: flex; align-items: center; justify-content: space-between; padding-top: 32px; }
+  header.nav { display: flex; align-items: center; padding-top: 32px; }
   .logo { font-size: 1.25rem; letter-spacing: 0.02em; }
   .logo-sub { color: #C9A66B; font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; }
-  nav a { color: #D8CBB4; text-decoration: none; margin-left: 28px; font-size: 0.9rem; }
-  nav a:hover { color: #F3EAD8; }
-  nav a:focus-visible { outline: 2px solid #C9A227; outline-offset: 3px; }
 
   .hero { padding: 56px 0 40px; }
   .eyebrow { color: #C9A227; font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 20px; }
@@ -207,10 +204,6 @@ SHOWCASE_HTML_TEMPLATE = """
         <div class="logo display">SENA</div>
         <div class="logo-sub">Home Solution</div>
       </div>
-      <nav>
-        <a href="#concepts">Concepts</a>
-        <a href="#visit">Visit</a>
-      </nav>
     </header>
 
     <section class="hero">
@@ -219,12 +212,12 @@ SHOWCASE_HTML_TEMPLATE = """
       <p class="lead">Sena doesn't build to order — we hold ready-made concepts in stock, each with its own wood, fabric, and mood already decided. Pick the one that's you.</p>
     </section>
 
-    <section id="concepts">
+    <section>
       <div class="tabs" id="tabs"></div>
       <div class="concept-card" id="concept-card"></div>
     </section>
 
-    <footer id="visit">
+    <footer>
       <div class="footer-inner">
         <div>
           <div class="footer-name display">Sena Home Solution</div>
