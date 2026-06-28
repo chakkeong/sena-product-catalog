@@ -301,14 +301,17 @@ def build_nav_pages(viewer_is_admin: bool) -> list:
     Single source of truth for the app's page list, used both by the router
     (app.py, for st.navigation) and by render_top_navbar (for the matching
     page_link buttons), so the two never drift out of sync.
+
+    Showcase is the landing page for everyone (default=True) and sits first
+    in the nav order, since it's the public-facing front door to the catalog.
     """
     pages = []
+    pages.append(st.Page("pages/4_Showcase.py", title="Showcase", icon="✨", default=True))
     if viewer_is_admin:
-        pages.append(st.Page("pages/0_Dashboard.py", title="Dashboard", icon="📊", default=True))
-    pages.append(st.Page("pages/1_Catalog.py", title="Catalog", icon="🛋️", default=not viewer_is_admin))
+        pages.append(st.Page("pages/0_Dashboard.py", title="Dashboard", icon="📊"))
+    pages.append(st.Page("pages/1_Catalog.py", title="Catalog", icon="🛋️"))
     pages.append(st.Page("pages/2_Cart.py", title="Cart", icon="🛒"))
     pages.append(st.Page("pages/3_Order_History.py", title="Order History", icon="📦"))
-    pages.append(st.Page("pages/4_Showcase.py", title="Showcase", icon="✨"))
     return pages
 
 
