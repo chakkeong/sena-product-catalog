@@ -125,7 +125,7 @@ for concept in concepts_data:
 
 with st.container(height=1):
     for product_id, product in unique_products_by_id.items():
-        if st.button(f"__addcart__{product_id}__", key=f"hidden_addcart_{product_id}"):
+        if st.button(f"ADDCARTBTN-{product_id}", key=f"hidden_addcart_{product_id}"):
             add_product_to_cart(product_id)
 
 
@@ -400,7 +400,7 @@ SHOWCASE_HTML_TEMPLATE = """
     // a plain DOM operation with no cross-origin restriction at all.
     cardEl.querySelectorAll(".add-cart-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        const targetLabel = `__addcart__${btn.dataset.id}__`;
+        const targetLabel = `ADDCARTBTN-${btn.dataset.id}`;
         const parentButtons = window.parent.document.querySelectorAll("button");
         let matched = null;
         for (const b of parentButtons) {
