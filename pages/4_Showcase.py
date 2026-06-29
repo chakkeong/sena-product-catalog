@@ -79,7 +79,7 @@ SHOWCASE_HTML_TEMPLATE = """
     font-family: 'Work Sans', sans-serif;
   }
   .display { font-family: 'Fraunces', serif; }
-  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; }
 
   header.nav { display: flex; align-items: center; padding-top: 32px; }
   .logo { font-size: 1.25rem; letter-spacing: 0.02em; }
@@ -109,22 +109,43 @@ SHOWCASE_HTML_TEMPLATE = """
     width: 100%; aspect-ratio: 16 / 10; height: auto;
     border-radius: 12px; margin-bottom: 16px; object-fit: contain;
     object-position: center; background: #2B1D14; display: block;
-    transition: height 0.2s ease, aspect-ratio 0.2s ease;
-  }
-  .hero-img-wrap.expanded .hero-img {
-    aspect-ratio: auto; height: 640px;
   }
   .hero-expand-btn {
     position: absolute; bottom: 28px; right: 12px; width: 36px; height: 36px;
     border-radius: 50%; border: none; background: rgba(43, 29, 20, 0.75);
     color: #F3EAD8; display: flex; align-items: center; justify-content: center;
     cursor: pointer; backdrop-filter: blur(2px); transition: background 0.15s;
-    text-decoration: none;
   }
   .hero-expand-btn:hover { background: #C9A227; color: #2B1D14; }
   .hero-expand-btn:focus-visible { outline: 2px solid #C9A227; outline-offset: 2px; }
   .concept-title { font-size: 1.4rem; margin-bottom: 8px; }
   .concept-mood { color: #D8CBB4; font-size: 0.9rem; }
+
+  /* Lightbox: the backdrop is "fixed" so it dims whatever's currently
+     visible (this page has no internal scrollbar of its own, so "fixed"
+     here just means "the whole rendered area"). The popup itself is
+     "absolute" relative to .wrap instead — anchored to the photo's own
+     position in the page, so it appears exactly where you're already
+     looking no matter how far down the page you've scrolled. */
+  .lightbox-backdrop {
+    position: fixed; inset: 0; background: rgba(20, 13, 8, 0.92);
+    z-index: 9000; cursor: pointer;
+  }
+  .lightbox-popup {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    width: min(92%, 820px); z-index: 9001;
+  }
+  .lightbox-popup img {
+    width: 100%; height: auto; max-height: 640px; object-fit: contain;
+    border-radius: 10px; background: #2B1D14; display: block;
+  }
+  .lightbox-close-btn {
+    position: absolute; top: -44px; right: 0; width: 36px; height: 36px;
+    border-radius: 50%; border: none; background: rgba(43, 29, 20, 0.85);
+    color: #F3EAD8; cursor: pointer; display: flex; align-items: center;
+    justify-content: center; font-size: 1.1rem;
+  }
+  .lightbox-close-btn:hover { background: #C9A227; color: #2B1D14; }
 
   .products {
     flex: 1; min-width: 0; display: grid;
@@ -258,16 +279,15 @@ SHOWCASE_HTML_TEMPLATE = """
 
     const EXPAND_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
 
-    // Enlarging via a real Drive page navigation (even a "public" link) can
+    // Opening via a real Drive page navigation (even a "public" link) can
     // trigger Google's account-chooser screen when multiple Google accounts
     // are signed into the browser — that's a Drive/account-switcher quirk,
-    // not a permissions problem, and there's no URL format that reliably
-    // avoids it. Growing the existing <img> in place instead means there's
-    // no navigation at all, so the prompt never has a chance to appear.
+    // not a permissions problem. A same-page popup avoids navigation
+    // entirely, so the prompt never has a chance to appear.
     const heroBlock = concept.hero_image
       ? `<div class="hero-img-wrap">
           <img class="hero-img" src="${concept.hero_image}" loading="lazy" decoding="async" alt="${concept.label} concept" />
-          <button class="hero-expand-btn" aria-label="Enlarge photo">${EXPAND_SVG}</button>
+          <button class="hero-expand-btn" data-src="${concept.hero_image}" aria-label="Enlarge photo">${EXPAND_SVG}</button>
         </div>`
       : `<div class="grain" style="background:#5C3A21;"></div>`;
 
@@ -300,12 +320,46 @@ SHOWCASE_HTML_TEMPLATE = """
 
     const expandBtn = cardEl.querySelector(".hero-expand-btn");
     if (expandBtn) {
-      expandBtn.addEventListener("click", () => {
-        const wrap = expandBtn.closest(".hero-img-wrap");
-        const nowExpanded = wrap.classList.toggle("expanded");
-        expandBtn.setAttribute("aria-label", nowExpanded ? "Shrink photo" : "Enlarge photo");
-      });
+      expandBtn.addEventListener("click", () => openLightbox(expandBtn));
     }
+  }
+
+  function openLightbox(anchorEl) {
+    closeLightbox();
+
+    const wrapEl = document.querySelector(".wrap");
+    const wrapRect = wrapEl.getBoundingClientRect();
+    const anchorRect = anchorEl.closest(".hero-img-wrap").getBoundingClientRect();
+    const topOffset = anchorRect.top - wrapRect.top;
+
+    const backdrop = document.createElement("div");
+    backdrop.className = "lightbox-backdrop";
+    backdrop.id = "sena-lightbox-backdrop";
+    backdrop.addEventListener("click", closeLightbox);
+
+    const popup = document.createElement("div");
+    popup.className = "lightbox-popup";
+    popup.id = "sena-lightbox-popup";
+    popup.style.top = `${Math.max(topOffset, 0)}px`;
+    popup.innerHTML = `
+      <button class="lightbox-close-btn" aria-label="Close">✕</button>
+      <img src="${anchorEl.dataset.src}" alt="" />
+    `;
+    popup.querySelector(".lightbox-close-btn").addEventListener("click", closeLightbox);
+
+    wrapEl.appendChild(backdrop);
+    wrapEl.appendChild(popup);
+    document.addEventListener("keydown", onLightboxKeydown);
+  }
+
+  function closeLightbox() {
+    document.getElementById("sena-lightbox-backdrop")?.remove();
+    document.getElementById("sena-lightbox-popup")?.remove();
+    document.removeEventListener("keydown", onLightboxKeydown);
+  }
+
+  function onLightboxKeydown(e) {
+    if (e.key === "Escape") closeLightbox();
   }
 
   renderTabs();
