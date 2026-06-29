@@ -254,12 +254,14 @@ SHOWCASE_HTML_TEMPLATE = """
 
     const EXPAND_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
 
-    // Open a higher-resolution version in a new tab rather than an in-page
-    // lightbox: this page renders inside an auto-sizing, non-scrolling
-    // iframe, where a position:fixed overlay would center against the
-    // iframe's full content height rather than what's actually on screen.
-    // A new tab sidesteps that entirely and lets people pinch-zoom too.
-    const bigImage = (src) => src.includes("w1200") ? src.replace("w1200", "w2000") : src;
+    // The thumbnail endpoint is meant for <img> embedding; opening it as a
+    // direct page navigation (a new tab) can prompt for a Google account
+    // even on a publicly-shared file. Drive's "uc?export=view" endpoint is
+    // the one meant for direct viewing and doesn't have that problem.
+    const bigImage = (src) => {
+      const match = src.match(/id=([a-zA-Z0-9_-]+)/);
+      return match ? `https://drive.google.com/uc?export=view&id=${match[1]}` : src;
+    };
 
     const heroBlock = concept.hero_image
       ? `<div class="hero-img-wrap">
