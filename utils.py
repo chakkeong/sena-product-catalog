@@ -512,54 +512,59 @@ def render_contact_widget():
         f"""
         <script>
         (function() {{
-            var doc = window.parent.document;
-            var widget = doc.getElementById('sena-contact-widget');
-            if (!widget) {{
-                widget = doc.createElement('div');
-                widget.id = 'sena-contact-widget';
-                widget.style.position = 'fixed';
-                widget.style.bottom = '90px';
-                widget.style.right = '24px';
-                widget.style.display = 'flex';
-                widget.style.flexDirection = 'column';
-                widget.style.gap = '12px';
-                widget.style.zIndex = '999999';
-                widget.innerHTML =
-                    '<a href="?goto=cart" ' +
-                    'style="position:relative;width:52px;height:52px;border-radius:50%;display:flex;' +
-                    'align-items:center;justify-content:center;background:#2B1D14;border:1px solid #5C3A21;' +
-                    'color:#F3EAD8;font-size:1.4rem;text-decoration:none;' +
-                    'box-shadow:0 4px 14px rgba(0,0,0,0.25);">🛒' +
-                    '<span id="sena-cart-badge" style="position:absolute;top:-4px;right:-4px;' +
-                    'min-width:20px;height:20px;border-radius:10px;background:#C9A227;color:#2B1D14;' +
-                    'font-size:0.72rem;font-weight:800;display:none;align-items:center;justify-content:center;' +
-                    'padding:0 5px;font-family:sans-serif;"></span></a>' +
-                    '<a href="{FACEBOOK_URL}" target="_blank" rel="noopener" ' +
-                    'style="width:52px;height:52px;border-radius:50%;display:flex;' +
-                    'align-items:center;justify-content:center;background:#1877F2;' +
-                    'color:#fff;font-weight:800;font-size:1.5rem;font-family:Georgia,serif;' +
-                    'text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);">f</a>' +
-                    '<a href="{WHATSAPP_URL}" target="_blank" rel="noopener" ' +
-                    'style="width:52px;height:52px;border-radius:50%;display:flex;' +
-                    'align-items:center;justify-content:center;background:#25D366;' +
-                    'color:#fff;font-size:1.5rem;text-decoration:none;' +
-                    'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
-                doc.body.appendChild(widget);
-            }}
-            var badge = doc.getElementById('sena-cart-badge');
-            if (badge) {{
-                var count = {cart_count};
-                if (count > 0) {{
-                    badge.textContent = count;
-                    badge.style.display = 'flex';
-                }} else {{
-                    badge.style.display = 'none';
+            try {{
+                var doc = window.parent.document;
+                var widget = doc.getElementById('sena-contact-widget');
+                if (!widget) {{
+                    widget = doc.createElement('div');
+                    widget.id = 'sena-contact-widget';
+                    widget.style.position = 'fixed';
+                    widget.style.bottom = '90px';
+                    widget.style.right = '24px';
+                    widget.style.display = 'flex';
+                    widget.style.flexDirection = 'column';
+                    widget.style.gap = '12px';
+                    widget.style.zIndex = '999999';
+                    widget.innerHTML =
+                        '<a href="?goto=cart" ' +
+                        'style="position:relative;width:52px;height:52px;border-radius:50%;display:flex;' +
+                        'align-items:center;justify-content:center;background:#2B1D14;border:1px solid #5C3A21;' +
+                        'color:#F3EAD8;font-size:1.4rem;text-decoration:none;' +
+                        'box-shadow:0 4px 14px rgba(0,0,0,0.25);">🛒' +
+                        '<span id="sena-cart-badge" style="position:absolute;top:-4px;right:-4px;' +
+                        'min-width:20px;height:20px;border-radius:10px;background:#C9A227;color:#2B1D14;' +
+                        'font-size:0.72rem;font-weight:800;display:none;align-items:center;justify-content:center;' +
+                        'padding:0 5px;font-family:sans-serif;"></span></a>' +
+                        '<a href="{FACEBOOK_URL}" target="_blank" rel="noopener" ' +
+                        'style="width:52px;height:52px;border-radius:50%;display:flex;' +
+                        'align-items:center;justify-content:center;background:#1877F2;' +
+                        'color:#fff;font-weight:800;font-size:1.5rem;font-family:Georgia,serif;' +
+                        'text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);">f</a>' +
+                        '<a href="{WHATSAPP_URL}" target="_blank" rel="noopener" ' +
+                        'style="width:52px;height:52px;border-radius:50%;display:flex;' +
+                        'align-items:center;justify-content:center;background:#25D366;' +
+                        'color:#fff;font-size:1.5rem;text-decoration:none;' +
+                        'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
+                    doc.body.appendChild(widget);
                 }}
+                var badge = doc.getElementById('sena-cart-badge');
+                if (badge) {{
+                    var count = {cart_count};
+                    if (count > 0) {{
+                        badge.textContent = count;
+                        badge.style.display = 'flex';
+                    }} else {{
+                        badge.style.display = 'none';
+                    }}
+                }}
+            }} catch (e) {{
+                // TEMPORARY diagnostic — remove once the widget is confirmed working.
+                alert('Sena widget error: ' + e.name + ': ' + e.message);
             }}
         }})();
         </script>
         """,
-        height=0,
+        height=1,
     )
 
 
