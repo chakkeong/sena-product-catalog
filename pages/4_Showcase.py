@@ -75,30 +75,6 @@ if cart_add_id and products_df is not None and "ProductID" in products_df.column
         st.toast(f"Added {row.get('Name', 'item')} to cart", icon="🛒")
     st.rerun()
 
-# st.markdown's unsafe_allow_html renders via innerHTML, and browsers never
-# execute <script> tags inserted that way — so this listener needs
-# components.html (a real iframe, where scripts genuinely run) instead.
-# Everything inside targets window.parent — the actual top-level page —
-# since this tiny iframe's own window would never receive a postMessage
-# sent from the (sibling) product-grid iframe further down the page.
-components.html(
-    """
-    <script>
-    if (!window.parent.__senaCartBridgeInstalled) {
-        window.parent.__senaCartBridgeInstalled = true;
-        window.parent.addEventListener('message', function(event) {
-            if (event.data && event.data.type === 'sena-add-to-cart') {
-                var url = new URL(window.parent.location.href);
-                url.searchParams.set('cart_add', event.data.productId);
-                window.parent.location.href = url.toString();
-            }
-        });
-    }
-    </script>
-    """,
-    height=0,
-)
-
 # ---------------------------------------------------------------------------
 # Pull real products from the Google Sheet and group them by concept.
 # A product belongs to a concept if its Name contains that concept's keyword
@@ -402,14 +378,18 @@ SHOWCASE_HTML_TEMPLATE = """
     }
 
     // Showcase renders inside a sandboxed iframe, so it can't touch
-    // st.session_state directly — postMessage up to the listener script
-    // in the real page (added in Showcase.py, outside this component),
-    // which reloads with ?cart_add=<id> for Python to actually handle.
+    // st.session_state directly. Rather than postMessage to a separate
+    // listener (one more cross-frame hop that could silently fail),
+    // navigate window.top directly — the standard, reliable way an iframe
+    // reloads the actual page it's embedded in. Python catches ?cart_add=
+    // at the top of this file on the next run and adds the item for real.
     cardEl.querySelectorAll(".add-cart-btn").forEach(btn => {
       btn.addEventListener("click", () => {
         btn.disabled = true;
         btn.textContent = "Adding...";
-        window.parent.postMessage({ type: "sena-add-to-cart", productId: btn.dataset.id }, "*");
+        const url = new URL(window.top.location.href);
+        url.searchParams.set("cart_add", btn.dataset.id);
+        window.top.location.href = url.toString();
       });
     });
   }
