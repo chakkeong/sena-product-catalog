@@ -12,6 +12,7 @@ from utils import (
     drive_thumbnail_url,
     load_showcase_content,
     load_concepts,
+    get_price_for_tier,
     LOGO_PATH,
 )
 
@@ -19,6 +20,81 @@ st.set_page_config(page_title="Showcase — Sena Product Catalog", page_icon=LOG
 render_contact_widget()
 user_record = gate_access()
 render_top_navbar(user_record, st.session_state.get("nav_pages", []))
+
+selected_email = user_record.get("Email", "")
+own_tier = user_record.get("Tier", "Guest")
+
+try:
+    products_df = load_products()
+except Exception as e:
+    products_df = None
+    st.error(f"Could not load products from the Google Sheet: {e}")
+
+# ---------------------------------------------------------------------------
+# Bridge for "Add to Cart" clicks coming from the showcase grid below.
+# That grid is rendered inside a sandboxed components.html iframe, which
+# can't touch st.session_state directly — so its buttons postMessage up to
+# a small listener script (added further down, OUTSIDE the iframe) that
+# reloads this page with ?cart_add=<ProductID>. We catch that here, add the
+# item using the exact same cart shape Catalog/Cart already use, then clear
+# the param so refreshing the page doesn't re-add it.
+# ---------------------------------------------------------------------------
+
+cart_add_id = st.query_params.get("cart_add")
+if cart_add_id and products_df is not None and "ProductID" in products_df.columns:
+    del st.query_params["cart_add"]
+    match = products_df[products_df["ProductID"].astype(str) == str(cart_add_id)]
+    if not match.empty:
+        row = match.iloc[0]
+        price = get_price_for_tier(row, own_tier)
+        img_url = drive_thumbnail_url(str(row.get("ImageURL", "") or ""))
+
+        if "cart" not in st.session_state:
+            st.session_state.cart = []
+
+        existing_item = next(
+            (
+                item for item in st.session_state.cart
+                if item["id"] == cart_add_id and item["tier"] == own_tier
+            ),
+            None,
+        )
+        if existing_item:
+            existing_item["qty"] += 1
+        else:
+            st.session_state.cart.append({
+                "id": cart_add_id,
+                "name": row.get("Name", ""),
+                "size": row.get("Size/Measurement", ""),
+                "qty": 1,
+                "price": price,
+                "email": selected_email,
+                "tier": own_tier,
+                "image_url": img_url,
+            })
+        st.toast(f"Added {row.get('Name', 'item')} to cart", icon="🛒")
+    st.rerun()
+
+# This listener lives in the normal page (not inside the sandboxed iframe
+# below), so it can freely reload the page — that's what actually lets the
+# sandboxed component's button clicks reach the cart_add handler above.
+st.markdown(
+    """
+    <script>
+    if (!window.__senaCartBridgeInstalled) {
+        window.__senaCartBridgeInstalled = true;
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'sena-add-to-cart') {
+                var url = new URL(window.location.href);
+                url.searchParams.set('cart_add', event.data.productId);
+                window.location.href = url.toString();
+            }
+        });
+    }
+    </script>
+    """,
+    unsafe_allow_html=True,
+)
 
 # ---------------------------------------------------------------------------
 # Pull real products from the Google Sheet and group them by concept.
@@ -32,12 +108,6 @@ render_top_navbar(user_record, st.session_state.get("nav_pages", []))
 content = load_showcase_content()
 concept_defs = load_concepts()
 
-try:
-    products_df = load_products()
-except Exception as e:
-    products_df = None
-    st.error(f"Could not load products from the Google Sheet: {e}")
-
 concepts_data = []
 if products_df is not None and not products_df.empty and "Name" in products_df.columns:
     for cdef in concept_defs:
@@ -48,9 +118,10 @@ if products_df is not None and not products_df.empty and "Name" in products_df.c
         products = []
         for _, row in matches.iterrows():
             products.append({
+                "id": str(row.get("ProductID", "")),
                 "name": str(row.get("Name", "")),
                 "size": str(row.get("Size/Measurement", "") or ""),
-                "price": float(row.get("ConsumerPrice", 0) or 0),
+                "price": get_price_for_tier(row, own_tier),
                 "image": drive_thumbnail_url(str(row.get("ImageURL", "") or "")),
             })
         concepts_data.append({
@@ -62,6 +133,7 @@ if products_df is not None and not products_df.empty and "Name" in products_df.c
         })
 
 CONCEPTS_JSON = json.dumps(concepts_data)
+
 
 SHOWCASE_HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -185,10 +257,13 @@ SHOWCASE_HTML_TEMPLATE = """
     .products { grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
     .concept-title { font-size: 1.5rem; }
   }
-  .badge {
-    display: inline-block; font-size: 0.75rem; padding: 4px 10px; border-radius: 999px;
-    background: #4B5D45; color: #F3EAD8; margin-bottom: 16px;
+  .add-cart-btn {
+    width: 100%; margin-top: 12px; padding: 10px 0; border-radius: 8px; border: none;
+    background: #C9A227; color: #2B1D14; font-weight: 700; font-size: 0.85rem;
+    cursor: pointer; transition: background 0.15s;
   }
+  .add-cart-btn:hover { background: #E0B72E; }
+  .add-cart-btn:disabled { background: #5C3A21; color: #D8CBB4; cursor: default; }
   .product-name { font-size: 1.1rem; margin-bottom: 4px; }
   .product-spec { font-size: 0.75rem; color: #C9A66B; margin-bottom: 16px; }
   .product-bottom { display: flex; align-items: flex-end; justify-content: space-between; }
@@ -297,12 +372,12 @@ SHOWCASE_HTML_TEMPLATE = """
             ${p.image
               ? `<img class="product-thumb" src="${p.image}" loading="lazy" decoding="async" alt="${p.name}" />`
               : `<div class="product-thumb-placeholder">No image</div>`}
-            <span class="badge">Ready to ship</span>
             <div class="product-name display">${p.name}</div>
             <div class="product-spec">${p.size || '&nbsp;'}</div>
             <div class="product-bottom">
               <div class="product-price display">${fmtRM(p.price)}</div>
             </div>
+            <button class="add-cart-btn" data-id="${p.id}">Add to Cart</button>
           </div>
         `).join("")
       : '<div class="empty-note">No ready-made pieces tagged for this concept yet.</div>';
@@ -322,6 +397,18 @@ SHOWCASE_HTML_TEMPLATE = """
     if (expandBtn) {
       expandBtn.addEventListener("click", () => openLightbox(expandBtn));
     }
+
+    // Showcase renders inside a sandboxed iframe, so it can't touch
+    // st.session_state directly — postMessage up to the listener script
+    // in the real page (added in Showcase.py, outside this component),
+    // which reloads with ?cart_add=<id> for Python to actually handle.
+    cardEl.querySelectorAll(".add-cart-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        btn.disabled = true;
+        btn.textContent = "Adding...";
+        window.parent.postMessage({ type: "sena-add-to-cart", productId: btn.dataset.id }, "*");
+      });
+    });
   }
 
   function openLightbox(anchorEl) {
