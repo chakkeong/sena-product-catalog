@@ -502,11 +502,23 @@ def render_contact_widget():
     window.parent.document so the actual floating buttons attach to the
     real page rather than being trapped inside this small helper iframe.
 
+    The cart icon deliberately does NOT use a plain <a href="..."> link:
+    that causes a full browser navigation/reload, which can reset
+    st.session_state (losing the cart) depending on how the host platform
+    handles session continuity across a hard reload. Instead it clicks a
+    real (visually tucked away) Streamlit button, which triggers Streamlit's
+    own internal page switch — same mechanism as any normal in-app
+    navigation, so session state (the cart) is preserved correctly.
+
     The Facebook/WhatsApp icons are only created once (guarded so repeated
     reruns don't duplicate them), but the cart badge count is refreshed on
     every call so it stays live as items are added/removed elsewhere."""
     cart_items = st.session_state.get("cart", [])
     cart_count = sum(int(item.get("qty", 0) or 0) for item in cart_items)
+
+    with st.container(height=1):
+        if st.button("GOTOCARTBTN", key="hidden_goto_cart"):
+            st.switch_page("pages/2_Cart.py")
 
     components.html(
         f"""
@@ -526,10 +538,10 @@ def render_contact_widget():
                     widget.style.gap = '12px';
                     widget.style.zIndex = '999999';
                     widget.innerHTML =
-                        '<a href="?goto=cart" ' +
+                        '<a href="#" id="sena-cart-icon" ' +
                         'style="position:relative;width:52px;height:52px;border-radius:50%;display:flex;' +
                         'align-items:center;justify-content:center;background:#2B1D14;border:1px solid #5C3A21;' +
-                        'color:#F3EAD8;font-size:1.4rem;text-decoration:none;' +
+                        'color:#F3EAD8;font-size:1.4rem;text-decoration:none;cursor:pointer;' +
                         'box-shadow:0 4px 14px rgba(0,0,0,0.25);">🛒' +
                         '<span id="sena-cart-badge" style="position:absolute;top:-4px;right:-4px;' +
                         'min-width:20px;height:20px;border-radius:10px;background:#C9A227;color:#2B1D14;' +
@@ -546,6 +558,17 @@ def render_contact_widget():
                         'color:#fff;font-size:1.5rem;text-decoration:none;' +
                         'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
                     doc.body.appendChild(widget);
+
+                    doc.getElementById('sena-cart-icon').addEventListener('click', function(e) {{
+                        e.preventDefault();
+                        var buttons = doc.querySelectorAll('button');
+                        for (var i = 0; i < buttons.length; i++) {{
+                            if (buttons[i].textContent.trim() === 'GOTOCARTBTN') {{
+                                buttons[i].click();
+                                return;
+                            }}
+                        }}
+                    }});
                 }}
                 var badge = doc.getElementById('sena-cart-badge');
                 if (badge) {{
