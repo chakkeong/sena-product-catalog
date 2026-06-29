@@ -31,49 +31,49 @@ except Exception as e:
     st.error(f"Could not load products from the Google Sheet: {e}")
 
 # ---------------------------------------------------------------------------
-# Bridge for "Add to Cart" clicks coming from the showcase grid below.
-# That grid is rendered inside a sandboxed components.html iframe, which
-# can't touch st.session_state directly — so its buttons postMessage up to
-# a small listener script (added further down, OUTSIDE the iframe) that
-# reloads this page with ?cart_add=<ProductID>. We catch that here, add the
-# item using the exact same cart shape Catalog/Cart already use, then clear
-# the param so refreshing the page doesn't re-add it.
+# Bridge for "Add to Cart" clicks coming from the showcase grid below. That
+# grid renders inside a sandboxed components.html iframe, which can read/
+# write the real page's DOM (window.parent.document) but is NOT allowed to
+# navigate it — browsers treat those as separate permissions. So instead of
+# reloading the page with a query param, we render one real (hidden) button
+# per product further down, and the iframe's button finds and .click()s the
+# matching one — a plain DOM operation with no cross-origin restriction.
 # ---------------------------------------------------------------------------
 
-cart_add_id = st.query_params.get("cart_add")
-if cart_add_id and products_df is not None and "ProductID" in products_df.columns:
-    del st.query_params["cart_add"]
-    match = products_df[products_df["ProductID"].astype(str) == str(cart_add_id)]
-    if not match.empty:
-        row = match.iloc[0]
-        price = get_price_for_tier(row, own_tier)
-        img_url = drive_thumbnail_url(str(row.get("ImageURL", "") or ""))
+def add_product_to_cart(product_id: str):
+    if products_df is None or "ProductID" not in products_df.columns:
+        return
+    match = products_df[products_df["ProductID"].astype(str) == str(product_id)]
+    if match.empty:
+        return
+    row = match.iloc[0]
+    price = get_price_for_tier(row, own_tier)
+    img_url = drive_thumbnail_url(str(row.get("ImageURL", "") or ""))
 
-        if "cart" not in st.session_state:
-            st.session_state.cart = []
+    if "cart" not in st.session_state:
+        st.session_state.cart = []
 
-        existing_item = next(
-            (
-                item for item in st.session_state.cart
-                if item["id"] == cart_add_id and item["tier"] == own_tier
-            ),
-            None,
-        )
-        if existing_item:
-            existing_item["qty"] += 1
-        else:
-            st.session_state.cart.append({
-                "id": cart_add_id,
-                "name": row.get("Name", ""),
-                "size": row.get("Size/Measurement", ""),
-                "qty": 1,
-                "price": price,
-                "email": selected_email,
-                "tier": own_tier,
-                "image_url": img_url,
-            })
-        st.toast(f"Added {row.get('Name', 'item')} to cart", icon="🛒")
-    st.rerun()
+    existing_item = next(
+        (
+            item for item in st.session_state.cart
+            if item["id"] == product_id and item["tier"] == own_tier
+        ),
+        None,
+    )
+    if existing_item:
+        existing_item["qty"] += 1
+    else:
+        st.session_state.cart.append({
+            "id": product_id,
+            "name": row.get("Name", ""),
+            "size": row.get("Size/Measurement", ""),
+            "qty": 1,
+            "price": price,
+            "email": selected_email,
+            "tier": own_tier,
+            "image_url": img_url,
+        })
+    st.toast(f"Added {row.get('Name', 'item')} to cart", icon="🛒")
 
 # ---------------------------------------------------------------------------
 # Pull real products from the Google Sheet and group them by concept.
@@ -112,6 +112,21 @@ if products_df is not None and not products_df.empty and "Name" in products_df.c
         })
 
 CONCEPTS_JSON = json.dumps(concepts_data)
+
+# One real (visually tucked-away) Streamlit button per unique product. The
+# showcase grid's JS below finds the matching one by its exact label text
+# and calls .click() on it — a normal DOM operation, so it sidesteps the
+# cross-origin navigation restriction entirely. label_visibility/height
+# keep this out of the way without relying on version-fragile CSS hacks.
+unique_products_by_id = {}
+for concept in concepts_data:
+    for p in concept["products"]:
+        unique_products_by_id[p["id"]] = p
+
+with st.container(height=1):
+    for product_id, product in unique_products_by_id.items():
+        if st.button(f"__addcart__{product_id}__", key=f"hidden_addcart_{product_id}"):
+            add_product_to_cart(product_id)
 
 
 SHOWCASE_HTML_TEMPLATE = """
@@ -377,33 +392,27 @@ SHOWCASE_HTML_TEMPLATE = """
       expandBtn.addEventListener("click", () => openLightbox(expandBtn));
     }
 
-    // Showcase renders inside a sandboxed iframe, so it can't touch
-    // st.session_state directly. Rather than postMessage to a separate
-    // listener (one more cross-frame hop that could silently fail),
-    // navigate window.top directly — the standard, reliable way an iframe
-    // reloads the actual page it's embedded in. Python catches ?cart_add=
-    // at the top of this file on the next run and adds the item for real.
+    // Showcase renders inside a sandboxed iframe: it can read/write the
+    // real page's DOM (window.parent.document) but is NOT allowed to
+    // navigate it — confirmed via testing, those are separate browser
+    // permissions. So instead of navigating, find the real (hidden)
+    // Streamlit button rendered for this exact product and .click() it —
+    // a plain DOM operation with no cross-origin restriction at all.
     cardEl.querySelectorAll(".add-cart-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        try {
+        const targetLabel = `__addcart__${btn.dataset.id}__`;
+        const parentButtons = window.parent.document.querySelectorAll("button");
+        let matched = null;
+        for (const b of parentButtons) {
+          if (b.textContent.trim() === targetLabel) { matched = b; break; }
+        }
+        if (matched) {
           btn.disabled = true;
-          btn.textContent = "Adding...";
-          const url = new URL(window.top.location.href);
-          url.searchParams.set("cart_add", btn.dataset.id);
-          window.top.location.href = url.toString();
-          // If navigation actually happens, this whole script context gets
-          // destroyed and this timer never fires. If it DOES fire, that
-          // means the navigation was silently blocked (no error thrown).
-          setTimeout(() => {
-            alert("Add to cart: navigation did not happen — likely blocked by the browser.");
-            btn.disabled = false;
-            btn.textContent = "Add to Cart";
-          }, 1500);
-        } catch (e) {
-          // TEMPORARY diagnostic — remove once Add to Cart is confirmed working.
-          alert("Add to cart error: " + e.name + ": " + e.message);
-          btn.disabled = false;
-          btn.textContent = "Add to Cart";
+          btn.textContent = "Added ✓";
+          matched.click();
+          setTimeout(() => { btn.disabled = false; btn.textContent = "Add to Cart"; }, 1200);
+        } else {
+          alert("Add to cart: could not find the matching item — please refresh and try again.");
         }
       });
     });
