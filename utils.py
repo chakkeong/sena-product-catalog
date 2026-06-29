@@ -520,12 +520,11 @@ def render_contact_widget():
     # it doesn't truly hide content — use a marker + CSS sibling selector
     # for a real display:none instead, same data-testid="stButton" selector
     # already used (and confirmed working) in render_top_navbar's CSS below.
-    st.markdown('<div id="sena-cart-bridge-marker"></div>', unsafe_allow_html=True)
-    if st.button("GOTOCARTBTN", key="hidden_goto_cart"):
-        st.switch_page("pages/2_Cart.py")
+    with st.container(key="sena_cart_bridge"):
+        if st.button("GOTOCARTBTN", key="hidden_goto_cart"):
+            st.switch_page("pages/2_Cart.py")
     st.markdown(
-        '<style>#sena-cart-bridge-marker ~ div[data-testid="stButton"] '
-        '{ display: none !important; }</style>',
+        '<style>.st-key-sena_cart_bridge { display: none !important; }</style>',
         unsafe_allow_html=True,
     )
 
