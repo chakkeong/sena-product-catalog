@@ -128,21 +128,21 @@ CONCEPTS_JSON = json.dumps(concepts_data)
 # One real button per unique product. The showcase grid's JS below finds
 # the matching one by its exact label text and calls .click() on it — a
 # normal DOM operation, sidestepping the cross-origin navigation
-# restriction entirely. Hidden via a marker + CSS sibling selector for a
-# real display:none (st.container(height=1) only clips visually, it
-# doesn't actually hide the content — confirmed by testing).
+# restriction entirely. Hidden via Streamlit's documented container `key`
+# mechanism, which produces a stable `st-key-<name>` CSS class — more
+# reliable than guessing at Streamlit's internal DOM nesting (which is
+# exactly what went wrong with the previous marker+sibling-selector attempt).
 unique_products_by_id = {}
 for concept in concepts_data:
     for p in concept["products"]:
         unique_products_by_id[p["id"]] = p
 
-st.markdown('<div id="sena-addcart-bridge-marker"></div>', unsafe_allow_html=True)
-for product_id, product in unique_products_by_id.items():
-    if st.button(f"ADDCARTBTN-{product_id}", key=f"hidden_addcart_{product_id}"):
-        add_product_to_cart(product_id)
+with st.container(key="sena_addcart_bridge"):
+    for product_id, product in unique_products_by_id.items():
+        if st.button(f"ADDCARTBTN-{product_id}", key=f"hidden_addcart_{product_id}"):
+            add_product_to_cart(product_id)
 st.markdown(
-    '<style>#sena-addcart-bridge-marker ~ div[data-testid="stButton"] '
-    '{ display: none !important; }</style>',
+    '<style>.st-key-sena_addcart_bridge { display: none !important; }</style>',
     unsafe_allow_html=True,
 )
 
