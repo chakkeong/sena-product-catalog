@@ -125,20 +125,26 @@ if products_df is not None and not products_df.empty and "Name" in products_df.c
 
 CONCEPTS_JSON = json.dumps(concepts_data)
 
-# One real (visually tucked-away) Streamlit button per unique product. The
-# showcase grid's JS below finds the matching one by its exact label text
-# and calls .click() on it — a normal DOM operation, so it sidesteps the
-# cross-origin navigation restriction entirely. label_visibility/height
-# keep this out of the way without relying on version-fragile CSS hacks.
+# One real button per unique product. The showcase grid's JS below finds
+# the matching one by its exact label text and calls .click() on it — a
+# normal DOM operation, sidestepping the cross-origin navigation
+# restriction entirely. Hidden via a marker + CSS sibling selector for a
+# real display:none (st.container(height=1) only clips visually, it
+# doesn't actually hide the content — confirmed by testing).
 unique_products_by_id = {}
 for concept in concepts_data:
     for p in concept["products"]:
         unique_products_by_id[p["id"]] = p
 
-with st.container(height=1):
-    for product_id, product in unique_products_by_id.items():
-        if st.button(f"ADDCARTBTN-{product_id}", key=f"hidden_addcart_{product_id}"):
-            add_product_to_cart(product_id)
+st.markdown('<div id="sena-addcart-bridge-marker"></div>', unsafe_allow_html=True)
+for product_id, product in unique_products_by_id.items():
+    if st.button(f"ADDCARTBTN-{product_id}", key=f"hidden_addcart_{product_id}"):
+        add_product_to_cart(product_id)
+st.markdown(
+    '<style>#sena-addcart-bridge-marker ~ div[data-testid="stButton"] '
+    '{ display: none !important; }</style>',
+    unsafe_allow_html=True,
+)
 
 
 SHOWCASE_HTML_TEMPLATE = """
