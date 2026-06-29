@@ -17,6 +17,7 @@ import gspread
 import pandas as pd
 import requests
 import streamlit as st
+import streamlit.components.v1 as components
 from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
 
@@ -490,8 +491,16 @@ WHATSAPP_URL = "https://wa.me/60136338923"
 
 def render_contact_widget():
     """Render a floating Cart + Facebook + WhatsApp widget, fixed to the
-    real browser viewport (not Streamlit's element wrapper, which can apply
-    a CSS transform during mount and break position:fixed).
+    real browser viewport.
+
+    This uses components.html rather than st.markdown: st.markdown's
+    unsafe_allow_html renders raw HTML via innerHTML under the hood, and
+    browsers never execute <script> tags inserted that way (a universal
+    rule, not a Streamlit quirk) — so a widget built that way may never
+    actually run. components.html renders a real (tiny, invisible) iframe
+    document where scripts genuinely execute; the script then reaches into
+    window.parent.document so the actual floating buttons attach to the
+    real page rather than being trapped inside this small helper iframe.
 
     The Facebook/WhatsApp icons are only created once (guarded so repeated
     reruns don't duplicate them), but the cart badge count is refreshed on
@@ -499,13 +508,14 @@ def render_contact_widget():
     cart_items = st.session_state.get("cart", [])
     cart_count = sum(int(item.get("qty", 0) or 0) for item in cart_items)
 
-    st.markdown(
+    components.html(
         f"""
         <script>
         (function() {{
-            var widget = document.getElementById('sena-contact-widget');
+            var doc = window.parent.document;
+            var widget = doc.getElementById('sena-contact-widget');
             if (!widget) {{
-                widget = document.createElement('div');
+                widget = doc.createElement('div');
                 widget.id = 'sena-contact-widget';
                 widget.style.position = 'fixed';
                 widget.style.bottom = '90px';
@@ -534,9 +544,9 @@ def render_contact_widget():
                     'align-items:center;justify-content:center;background:#25D366;' +
                     'color:#fff;font-size:1.5rem;text-decoration:none;' +
                     'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
-                document.body.appendChild(widget);
+                doc.body.appendChild(widget);
             }}
-            var badge = document.getElementById('sena-cart-badge');
+            var badge = doc.getElementById('sena-cart-badge');
             if (badge) {{
                 var count = {cart_count};
                 if (count > 0) {{
@@ -549,7 +559,7 @@ def render_contact_widget():
         }})();
         </script>
         """,
-        unsafe_allow_html=True,
+        height=0,
     )
 
 
