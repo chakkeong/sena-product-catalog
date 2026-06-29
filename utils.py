@@ -516,9 +516,18 @@ def render_contact_widget():
     cart_items = st.session_state.get("cart", [])
     cart_count = sum(int(item.get("qty", 0) or 0) for item in cart_items)
 
-    with st.container(height=1):
-        if st.button("GOTOCARTBTN", key="hidden_goto_cart"):
-            st.switch_page("pages/2_Cart.py")
+    # st.container(height=1) only clips visually (still scrollable/visible),
+    # it doesn't truly hide content — use a marker + CSS sibling selector
+    # for a real display:none instead, same data-testid="stButton" selector
+    # already used (and confirmed working) in render_top_navbar's CSS below.
+    st.markdown('<div id="sena-cart-bridge-marker"></div>', unsafe_allow_html=True)
+    if st.button("GOTOCARTBTN", key="hidden_goto_cart"):
+        st.switch_page("pages/2_Cart.py")
+    st.markdown(
+        '<style>#sena-cart-bridge-marker ~ div[data-testid="stButton"] '
+        '{ display: none !important; }</style>',
+        unsafe_allow_html=True,
+    )
 
     components.html(
         f"""
@@ -568,6 +577,8 @@ def render_contact_widget():
                                 return;
                             }}
                         }}
+                        // TEMPORARY diagnostic — remove once cart navigation is confirmed working.
+                        alert('Cart icon: hidden GOTOCARTBTN button not found in the page.');
                     }});
                 }}
                 var badge = doc.getElementById('sena-cart-badge');
