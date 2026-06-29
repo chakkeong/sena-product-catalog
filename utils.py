@@ -558,8 +558,7 @@ def render_contact_widget():
                     }}
                 }}
             }} catch (e) {{
-                // TEMPORARY diagnostic — remove once the widget is confirmed working.
-                alert('Sena widget error: ' + e.name + ': ' + e.message);
+                console.error('Sena widget error:', e);
             }}
         }})();
         </script>
