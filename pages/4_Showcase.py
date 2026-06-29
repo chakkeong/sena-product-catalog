@@ -14,6 +14,7 @@ from utils import (
     load_concepts,
     get_price_for_tier,
     is_admin,
+    format_currency,
     LOGO_PATH,
 )
 
@@ -35,6 +36,21 @@ if is_admin(user_record):
     own_tier = st.selectbox(
         "👑 Admin Preview — view Showcase pricing as tier", tier_options, index=default_idx,
     )
+
+# Same cart summary widget Catalog has — plain native Streamlit
+# (st.page_link), not part of the sandboxed product-grid component below,
+# so it's not subject to any of the cross-frame restrictions that made the
+# floating cart icon unreliable.
+cart = st.session_state.get("cart", [])
+if cart:
+    cart_total = sum(item["price"] * item["qty"] for item in cart)
+    cart_label_col, cart_link_col = st.columns([2, 1], vertical_alignment="center")
+    with cart_label_col:
+        st.markdown(f"🛒 **{len(cart)} item(s)** — {format_currency(cart_total)}")
+    with cart_link_col:
+        st.page_link("pages/2_Cart.py", label="Go to Cart →", icon="🛒")
+else:
+    st.caption("🛒 Cart is empty")
 
 try:
     products_df = load_products()
