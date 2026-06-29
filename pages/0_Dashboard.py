@@ -202,73 +202,90 @@ except Exception as e:
     concepts = []
     st.error(f"Could not load concepts: {e}")
 
-if concepts:
-    concept_tabs = st.tabs([c["label"] or c["id"].title() for c in concepts])
-else:
-    concept_tabs = []
+if not concepts:
     st.info("No concepts yet — add your first one below.")
+else:
+    concept_ids = [c["id"] for c in concepts]
+    concept_labels = [c["label"] or c["id"].title() for c in concepts]
 
-for tab, cdef in zip(concept_tabs, concepts):
-    concept_id = cdef["id"]
-    with tab:
-        photo_col, fields_col = st.columns([1, 2])
+    # Tabs reset to the first one on every rerun (e.g. right after saving),
+    # which made successful saves on other concepts look like nothing
+    # happened. A radio tied to session_state remembers the selection instead.
+    if st.session_state.get("dashboard_active_concept") not in concept_ids:
+        st.session_state["dashboard_active_concept"] = concept_ids[0]
 
-        with photo_col:
-            if cdef["hero_image"]:
-                st.image(cdef["hero_image"], width="stretch", caption="Current photo")
-            else:
-                st.caption("No photo set yet.")
+    selected_label = st.radio(
+        "Concept",
+        concept_labels,
+        index=concept_ids.index(st.session_state["dashboard_active_concept"]),
+        horizontal=True,
+        label_visibility="collapsed",
+    )
+    selected_id = concept_ids[concept_labels.index(selected_label)]
+    st.session_state["dashboard_active_concept"] = selected_id
+    cdef = next(c for c in concepts if c["id"] == selected_id)
 
-        with fields_col:
-            with st.form(f"showcase_form_{concept_id}"):
-                new_label = st.text_input("Concept name", value=cdef["label"], key=f"label_{concept_id}")
-                new_keyword = st.text_input(
-                    "Match keyword",
-                    value=cdef["keyword"],
-                    key=f"keyword_{concept_id}",
-                    help=(
-                        "Products whose Name contains this word (e.g. \"homey\") are shown under "
-                        "this concept. Must match something in your Products sheet."
-                    ),
-                )
-                new_mood = st.text_area(
-                    "Mood / description",
-                    value=cdef["mood"],
-                    height=130,
-                    key=f"mood_{concept_id}",
-                )
-                new_photo = st.file_uploader(
-                    "Replace photo (optional)",
-                    type=["jpg", "jpeg", "png", "webp"],
-                    key=f"upload_{concept_id}",
-                )
-                save_col, delete_col = st.columns([3, 1])
-                with save_col:
-                    saved = st.form_submit_button("Save changes", width="stretch")
-                with delete_col:
-                    deleted = st.form_submit_button("🗑️ Delete", width="stretch")
+    photo_col, fields_col = st.columns([1, 2])
 
-                if saved:
-                    updates = {"Label": new_label, "Keyword": new_keyword, "Mood": new_mood}
-                    if new_photo is not None:
-                        with st.spinner("Uploading photo to Drive..."):
-                            try:
-                                updates["HeroImageURL"] = upload_image_to_drive(
-                                    new_photo.getvalue(),
-                                    new_photo.name,
-                                    new_photo.type or "image/jpeg",
-                                )
-                            except Exception as e:
-                                st.error(f"Photo upload failed: {e}")
-                                st.stop()
-                    update_concept(concept_id, updates)
-                    st.success(f"{new_label or concept_id} updated.")
-                    st.rerun()
+    with photo_col:
+        if cdef["hero_image"]:
+            st.image(cdef["hero_image"], width="stretch", caption="Current photo")
+        else:
+            st.caption("No photo set yet.")
 
-                if deleted:
-                    delete_concept(concept_id)
-                    st.success(f"{cdef['label'] or concept_id} removed.")
-                    st.rerun()
+    with fields_col:
+        with st.form(f"showcase_form_{selected_id}"):
+            new_label = st.text_input("Concept name", value=cdef["label"], key=f"label_{selected_id}")
+            new_keyword = st.text_input(
+                "Match keyword",
+                value=cdef["keyword"],
+                key=f"keyword_{selected_id}",
+                help=(
+                    "Products whose Name contains this word (e.g. \"homey\") are shown under "
+                    "this concept. Must match something in your Products sheet."
+                ),
+            )
+            new_mood = st.text_area(
+                "Mood / description",
+                value=cdef["mood"],
+                height=130,
+                key=f"mood_{selected_id}",
+            )
+            new_photo = st.file_uploader(
+                "Replace photo (optional)",
+                type=["jpg", "jpeg", "png", "webp"],
+                key=f"upload_{selected_id}",
+            )
+            if new_photo is not None:
+                st.image(new_photo, width="stretch", caption="New photo — not saved yet")
+
+            save_col, delete_col = st.columns([3, 1])
+            with save_col:
+                saved = st.form_submit_button("Save changes", width="stretch")
+            with delete_col:
+                deleted = st.form_submit_button("🗑️ Delete", width="stretch")
+
+            if saved:
+                updates = {"Label": new_label, "Keyword": new_keyword, "Mood": new_mood}
+                if new_photo is not None:
+                    with st.spinner("Uploading photo to Drive..."):
+                        try:
+                            updates["HeroImageURL"] = upload_image_to_drive(
+                                new_photo.getvalue(),
+                                new_photo.name,
+                                new_photo.type or "image/jpeg",
+                            )
+                        except Exception as e:
+                            st.error(f"Photo upload failed: {e}")
+                            st.stop()
+                update_concept(selected_id, updates)
+                st.success(f"{new_label or selected_id} updated.")
+                st.rerun()
+
+            if deleted:
+                delete_concept(selected_id)
+                st.success(f"{cdef['label'] or selected_id} removed.")
+                st.rerun()
 
 with st.expander("➕ Add a new concept"):
     with st.form("add_concept_form", clear_on_submit=True):
@@ -283,6 +300,8 @@ with st.expander("➕ Add a new concept"):
         )
         add_mood = st.text_area("Mood / description", height=100)
         add_photo = st.file_uploader("Photo", type=["jpg", "jpeg", "png", "webp"])
+        if add_photo is not None:
+            st.image(add_photo, width="stretch", caption="Photo preview — not saved yet")
         if st.form_submit_button("Add concept"):
             if not add_label or not add_keyword:
                 st.warning("Please give the concept a name and a match keyword.")
