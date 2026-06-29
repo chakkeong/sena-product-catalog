@@ -126,30 +126,12 @@ SHOWCASE_DEFAULTS = {
         "Sena doesn't build to order — we hold ready-made concepts in stock, each with its own "
         "wood, fabric, and mood already decided. Pick the one that's you."
     ),
-    "homey_label": "Homey",
-    "homey_mood": (
-        "Warm, deep-seated pieces for a living room you don't want to leave. "
-        "Soft edges and generous cushioning, in woods that feel lived-in from day one."
-    ),
-    "homey_hero_image": "https://drive.google.com/thumbnail?id=17W_pwUonR3nnyDPsvM-i2eVZAGQi6CWM&sz=w1200",
-    "insta_label": "Insta",
-    "insta_mood": (
-        "Clean lines and a light palette, built to photograph as well as it sits. "
-        "The pieces your living room deserves to be seen in."
-    ),
-    "insta_hero_image": "https://drive.google.com/thumbnail?id=1mYeQCx08U7RVhdpNvyT8ELXto4j4ytpy&sz=w1200",
-    "modern_label": "Modern",
-    "modern_mood": (
-        "Tight, structured silhouettes for smaller spaces that still feel deliberate. "
-        "Less footprint, same presence."
-    ),
-    "modern_hero_image": "https://drive.google.com/thumbnail?id=1knwkTSdYVUbQBAYA98cK0gs0ORT3Ryv_&sz=w1200",
 }
 
 
 def load_showcase_content() -> dict:
-    """Load Showcase page text/images from the sheet, filling in any missing
-    keys with the defaults above so the page never renders blank."""
+    """Load Showcase hero text from the sheet, filling in any missing keys
+    with the defaults above so the page never renders blank."""
     content = dict(SHOWCASE_DEFAULTS)
     try:
         df = load_sheet("Showcase")
@@ -165,10 +147,117 @@ def load_showcase_content() -> dict:
 
 
 def save_showcase_value(key: str, value: str):
-    """Save one Showcase field. Creates the Showcase tab/row on first use."""
+    """Save one Showcase hero-text field. Creates the Showcase tab/row on first use."""
     ensure_worksheet("Showcase", ["Key", "Value"])
     if not update_row_by_match("Showcase", "Key", key, {"Value": value}):
         append_row_generic("Showcase", {"Key": key, "Value": value}, ["Key", "Value"])
+
+
+# ---------------------------------------------------------------------------
+# Showcase concepts (Homey / Insta / Modern, and any the admin adds) — one
+# row per concept, so the Dashboard can add, edit, and remove them freely
+# instead of being limited to three hardcoded options.
+# ---------------------------------------------------------------------------
+
+CONCEPTS_SHEET_COLUMNS = ["ConceptID", "Label", "Keyword", "Mood", "HeroImageURL", "SortOrder"]
+
+DEFAULT_CONCEPTS = [
+    {
+        "ConceptID": "homey", "Label": "Homey", "Keyword": "homey",
+        "Mood": (
+            "Warm, deep-seated pieces for a living room you don't want to leave. "
+            "Soft edges and generous cushioning, in woods that feel lived-in from day one."
+        ),
+        "HeroImageURL": "https://drive.google.com/thumbnail?id=17W_pwUonR3nnyDPsvM-i2eVZAGQi6CWM&sz=w1200",
+        "SortOrder": 1,
+    },
+    {
+        "ConceptID": "insta", "Label": "Insta", "Keyword": "insta",
+        "Mood": (
+            "Clean lines and a light palette, built to photograph as well as it sits. "
+            "The pieces your living room deserves to be seen in."
+        ),
+        "HeroImageURL": "https://drive.google.com/thumbnail?id=1mYeQCx08U7RVhdpNvyT8ELXto4j4ytpy&sz=w1200",
+        "SortOrder": 2,
+    },
+    {
+        "ConceptID": "modern", "Label": "Modern", "Keyword": "modern",
+        "Mood": (
+            "Tight, structured silhouettes for smaller spaces that still feel deliberate. "
+            "Less footprint, same presence."
+        ),
+        "HeroImageURL": "https://drive.google.com/thumbnail?id=1knwkTSdYVUbQBAYA98cK0gs0ORT3Ryv_&sz=w1200",
+        "SortOrder": 3,
+    },
+]
+
+
+def _slugify(text: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", str(text).strip().lower()).strip("-")
+    return slug or "concept"
+
+
+def load_concepts() -> list[dict]:
+    """
+    Load every Showcase concept, sorted for display. Seeds the Concepts tab
+    with the original Homey/Insta/Modern rows on first use (e.g. right after
+    upgrading from the old hardcoded version), so nothing goes blank.
+    """
+    ws = ensure_worksheet("Concepts", CONCEPTS_SHEET_COLUMNS)
+    df = load_sheet("Concepts")
+    if df.empty:
+        for row in DEFAULT_CONCEPTS:
+            ws.append_row([row[c] for c in CONCEPTS_SHEET_COLUMNS], value_input_option="USER_ENTERED")
+        clear_cache()
+        df = load_sheet("Concepts")
+
+    concepts = []
+    for _, r in df.iterrows():
+        try:
+            sort_order = int(r.get("SortOrder", 0) or 0)
+        except (TypeError, ValueError):
+            sort_order = 0
+        concepts.append({
+            "id": str(r.get("ConceptID", "")).strip(),
+            "label": str(r.get("Label", "")).strip(),
+            "keyword": str(r.get("Keyword", "")).strip(),
+            "mood": str(r.get("Mood", "")).strip(),
+            "hero_image": str(r.get("HeroImageURL", "")).strip(),
+            "sort_order": sort_order,
+        })
+    concepts.sort(key=lambda c: c["sort_order"])
+    return concepts
+
+
+def add_concept(label: str, keyword: str, mood: str, hero_image: str = "") -> str:
+    """Add a new concept and return its generated ConceptID."""
+    ws = ensure_worksheet("Concepts", CONCEPTS_SHEET_COLUMNS)
+    existing = load_concepts()
+    existing_ids = {c["id"] for c in existing}
+
+    base_id = _slugify(label)
+    concept_id = base_id
+    suffix = 2
+    while concept_id in existing_ids:
+        concept_id = f"{base_id}-{suffix}"
+        suffix += 1
+
+    next_sort = (max((c["sort_order"] for c in existing), default=0)) + 1
+    ws.append_row(
+        [concept_id, label, keyword, mood, hero_image, next_sort],
+        value_input_option="USER_ENTERED",
+    )
+    clear_cache()
+    return concept_id
+
+
+def update_concept(concept_id: str, updates: dict) -> bool:
+    """Update one or more fields (Label/Keyword/Mood/HeroImageURL) for a concept."""
+    return update_row_by_match("Concepts", "ConceptID", concept_id, updates)
+
+
+def delete_concept(concept_id: str) -> bool:
+    return delete_row_by_match("Concepts", "ConceptID", concept_id)
 
 
 # ---------------------------------------------------------------------------
@@ -312,6 +401,22 @@ def update_row_by_match(tab_name: str, match_col: str, match_value: str, updates
                 if col_name in headers:
                     col_idx = headers.index(col_name) + 1
                     ws.update_cell(i, col_idx, new_value)
+            clear_cache()
+            return True
+    return False
+
+
+def delete_row_by_match(tab_name: str, match_col: str, match_value: str) -> bool:
+    """Find the first row in tab_name where match_col == match_value and delete it entirely."""
+    ws = get_spreadsheet().worksheet(tab_name)
+    headers = ws.row_values(1)
+    if match_col not in headers:
+        return False
+    match_idx = headers.index(match_col)
+    all_values = ws.get_all_values()
+    for i, row in enumerate(all_values[1:], start=2):  # row 1 is the header row
+        if len(row) > match_idx and row[match_idx].strip().lower() == str(match_value).strip().lower():
+            ws.delete_rows(i)
             clear_cache()
             return True
     return False
