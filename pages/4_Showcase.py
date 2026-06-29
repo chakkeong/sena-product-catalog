@@ -75,25 +75,28 @@ if cart_add_id and products_df is not None and "ProductID" in products_df.column
         st.toast(f"Added {row.get('Name', 'item')} to cart", icon="🛒")
     st.rerun()
 
-# This listener lives in the normal page (not inside the sandboxed iframe
-# below), so it can freely reload the page — that's what actually lets the
-# sandboxed component's button clicks reach the cart_add handler above.
-st.markdown(
+# st.markdown's unsafe_allow_html renders via innerHTML, and browsers never
+# execute <script> tags inserted that way — so this listener needs
+# components.html (a real iframe, where scripts genuinely run) instead.
+# Everything inside targets window.parent — the actual top-level page —
+# since this tiny iframe's own window would never receive a postMessage
+# sent from the (sibling) product-grid iframe further down the page.
+components.html(
     """
     <script>
-    if (!window.__senaCartBridgeInstalled) {
-        window.__senaCartBridgeInstalled = true;
-        window.addEventListener('message', function(event) {
+    if (!window.parent.__senaCartBridgeInstalled) {
+        window.parent.__senaCartBridgeInstalled = true;
+        window.parent.addEventListener('message', function(event) {
             if (event.data && event.data.type === 'sena-add-to-cart') {
-                var url = new URL(window.location.href);
+                var url = new URL(window.parent.location.href);
                 url.searchParams.set('cart_add', event.data.productId);
-                window.location.href = url.toString();
+                window.parent.location.href = url.toString();
             }
         });
     }
     </script>
     """,
-    unsafe_allow_html=True,
+    height=0,
 )
 
 # ---------------------------------------------------------------------------
