@@ -19,6 +19,9 @@ from utils import (
     approve_application,
     reject_application,
     APPROVABLE_TIERS,
+    load_showcase_content,
+    save_showcase_value,
+    upload_image_to_drive,
 )
 
 st.set_page_config(
@@ -149,6 +152,95 @@ if not latest_orders.empty:
     st.dataframe(display_orders, width="stretch", hide_index=True)
 else:
     st.info("No orders yet. Head to the Catalog page to create your first purchase order.")
+
+st.write("")
+
+# ---------------------------------------------------------------------------
+# Showcase Page Editor — change the public Showcase page's photos and
+# writing directly, no code edits or spreadsheet wrangling required.
+# ---------------------------------------------------------------------------
+
+st.subheader("🖼️ Showcase Page Editor")
+st.caption("Edit what visitors see on your public Showcase page. Changes go live as soon as you save.")
+
+try:
+    showcase_content = load_showcase_content()
+except Exception as e:
+    showcase_content = {}
+    st.error(f"Could not load Showcase content: {e}")
+
+with st.expander("Top headline & intro text"):
+    with st.form("showcase_hero_form"):
+        hero_eyebrow = st.text_input(
+            "Small label above the headline",
+            value=showcase_content.get("hero_eyebrow", ""),
+        )
+        hero_headline = st.text_area(
+            "Headline",
+            value=showcase_content.get("hero_headline", ""),
+            height=80,
+        )
+        hero_lead = st.text_area(
+            "Intro paragraph",
+            value=showcase_content.get("hero_lead", ""),
+            height=100,
+        )
+        if st.form_submit_button("Save headline & intro"):
+            save_showcase_value("hero_eyebrow", hero_eyebrow)
+            save_showcase_value("hero_headline", hero_headline)
+            save_showcase_value("hero_lead", hero_lead)
+            st.success("Headline and intro updated.")
+            st.rerun()
+
+CONCEPT_TABS = [("homey", "Homey"), ("insta", "Insta"), ("modern", "Modern")]
+concept_tabs = st.tabs([label for _, label in CONCEPT_TABS])
+
+for tab, (concept_id, concept_label) in zip(concept_tabs, CONCEPT_TABS):
+    with tab:
+        photo_col, fields_col = st.columns([1, 2])
+
+        current_image = showcase_content.get(f"{concept_id}_hero_image", "")
+        with photo_col:
+            if current_image:
+                st.image(current_image, width="stretch", caption="Current photo")
+            else:
+                st.caption("No photo set yet.")
+
+        with fields_col:
+            with st.form(f"showcase_form_{concept_id}"):
+                new_label = st.text_input(
+                    "Concept name",
+                    value=showcase_content.get(f"{concept_id}_label", concept_label),
+                    key=f"label_{concept_id}",
+                )
+                new_mood = st.text_area(
+                    "Mood / description",
+                    value=showcase_content.get(f"{concept_id}_mood", ""),
+                    height=130,
+                    key=f"mood_{concept_id}",
+                )
+                new_photo = st.file_uploader(
+                    "Replace photo (optional)",
+                    type=["jpg", "jpeg", "png", "webp"],
+                    key=f"upload_{concept_id}",
+                )
+                if st.form_submit_button(f"Save {concept_label}"):
+                    save_showcase_value(f"{concept_id}_label", new_label)
+                    save_showcase_value(f"{concept_id}_mood", new_mood)
+                    if new_photo is not None:
+                        with st.spinner("Uploading photo to Drive..."):
+                            try:
+                                new_url = upload_image_to_drive(
+                                    new_photo.getvalue(),
+                                    new_photo.name,
+                                    new_photo.type or "image/jpeg",
+                                )
+                                save_showcase_value(f"{concept_id}_hero_image", new_url)
+                            except Exception as e:
+                                st.error(f"Photo upload failed: {e}")
+                                st.stop()
+                    st.success(f"{concept_label} updated.")
+                    st.rerun()
 
 st.write("")
 st.caption("Use the sidebar to navigate to Catalog, Cart, and Order History.")

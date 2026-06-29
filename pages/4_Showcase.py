@@ -1,3 +1,4 @@
+import html
 import json
 
 import streamlit as st
@@ -9,6 +10,7 @@ from utils import (
     render_contact_widget,
     load_products,
     drive_thumbnail_url,
+    load_showcase_content,
     LOGO_PATH,
 )
 
@@ -20,47 +22,19 @@ render_top_navbar(user_record, st.session_state.get("nav_pages", []))
 # ---------------------------------------------------------------------------
 # Pull real products from the Google Sheet and group them by concept.
 # A product belongs to a concept if its Name contains that concept's keyword
-# (e.g. "Sofa 3 Seater Homey" matches the "Homey" concept).
+# (e.g. "Sofa 3 Seater Homey" matches the "Homey" concept). The keyword
+# mapping stays in code since it's structural; the label/mood/photo for each
+# concept (and the hero text above) come from the Showcase sheet tab, which
+# is editable from the Dashboard.
 # ---------------------------------------------------------------------------
 
-CONCEPT_DEFS = [
-    {
-        "id": "homey",
-        "label": "Homey",
-        "keyword": "homey",
-        "mood": (
-            "Warm, deep-seated pieces for a living room you don't want to leave. "
-            "Soft edges and generous cushioning, in woods that feel lived-in from day one."
-        ),
-    },
-    {
-        "id": "insta",
-        "label": "Insta",
-        "keyword": "insta",
-        "mood": (
-            "Clean lines and a light palette, built to photograph as well as it sits. "
-            "The pieces your living room deserves to be seen in."
-        ),
-    },
-    {
-        "id": "modern",
-        "label": "Modern",
-        "keyword": "modern",
-        "mood": (
-            "Tight, structured silhouettes for smaller spaces that still feel deliberate. "
-            "Less footprint, same presence."
-        ),
-    },
-]
+content = load_showcase_content()
 
-# Curated moodboard photos for each concept's hero image (uploaded to Drive,
-# now public). These take priority over the dynamic "first product photo"
-# fallback below, since they show the full styled room rather than a single item.
-CONCEPT_HERO_OVERRIDE = {
-    "homey": "https://drive.google.com/thumbnail?id=17W_pwUonR3nnyDPsvM-i2eVZAGQi6CWM&sz=w1200",
-    "insta": "https://drive.google.com/thumbnail?id=1mYeQCx08U7RVhdpNvyT8ELXto4j4ytpy&sz=w1200",
-    "modern": "https://drive.google.com/thumbnail?id=1knwkTSdYVUbQBAYA98cK0gs0ORT3Ryv_&sz=w1200",
-}
+CONCEPT_DEFS = [
+    {"id": "homey", "keyword": "homey"},
+    {"id": "insta", "keyword": "insta"},
+    {"id": "modern", "keyword": "modern"},
+]
 
 try:
     products_df = load_products()
@@ -84,9 +58,9 @@ if products_df is not None and not products_df.empty and "Name" in products_df.c
             })
         concepts_data.append({
             "id": cdef["id"],
-            "label": cdef["label"],
-            "mood": cdef["mood"],
-            "hero_image": CONCEPT_HERO_OVERRIDE.get(cdef["id"]) or (products[0]["image"] if products else ""),
+            "label": content.get(f"{cdef['id']}_label", cdef["id"].title()),
+            "mood": content.get(f"{cdef['id']}_mood", ""),
+            "hero_image": content.get(f"{cdef['id']}_hero_image") or (products[0]["image"] if products else ""),
             "products": products,
         })
 
@@ -207,9 +181,9 @@ SHOWCASE_HTML_TEMPLATE = """
     </header>
 
     <section class="hero">
-      <div class="eyebrow">Ready-made, by concept</div>
-      <h1 class="display">Every piece is finished and ready. You're choosing a feeling, not a spec sheet.</h1>
-      <p class="lead">Sena doesn't build to order — we hold ready-made concepts in stock, each with its own wood, fabric, and mood already decided. Pick the one that's you.</p>
+      <div class="eyebrow">__HERO_EYEBROW__</div>
+      <h1 class="display">__HERO_HEADLINE__</h1>
+      <p class="lead">__HERO_LEAD__</p>
     </section>
 
     <section>
@@ -327,6 +301,12 @@ SHOWCASE_HTML_TEMPLATE = """
 </html>
 """
 
-SHOWCASE_HTML = SHOWCASE_HTML_TEMPLATE.replace("__CONCEPTS_JSON__", CONCEPTS_JSON)
+SHOWCASE_HTML = (
+    SHOWCASE_HTML_TEMPLATE
+    .replace("__CONCEPTS_JSON__", CONCEPTS_JSON)
+    .replace("__HERO_EYEBROW__", html.escape(content.get("hero_eyebrow", "")))
+    .replace("__HERO_HEADLINE__", html.escape(content.get("hero_headline", "")))
+    .replace("__HERO_LEAD__", html.escape(content.get("hero_lead", "")))
+)
 
 components.html(SHOWCASE_HTML, height=600, scrolling=False)
