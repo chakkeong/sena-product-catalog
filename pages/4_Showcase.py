@@ -157,6 +157,12 @@ with st.container(key="sena_addcart_bridge"):
     for product_id, product in unique_products_by_id.items():
         if st.button(f"ADDCARTBTN-{product_id}", key=f"hidden_addcart_{product_id}"):
             add_product_to_cart(product_id)
+            # The cart summary widget near the top of this script already
+            # ran (using the pre-add cart state) before this button gets
+            # processed — without this, it would show a stale count until
+            # some unrelated rerun happened to refresh it. Forcing a rerun
+            # here makes it update immediately.
+            st.rerun()
 st.markdown(
     '<style>.st-key-sena_addcart_bridge { display: none !important; }</style>',
     unsafe_allow_html=True,
