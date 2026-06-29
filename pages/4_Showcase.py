@@ -13,6 +13,7 @@ from utils import (
     load_showcase_content,
     load_concepts,
     get_price_for_tier,
+    is_admin,
     LOGO_PATH,
 )
 
@@ -23,6 +24,17 @@ render_top_navbar(user_record, st.session_state.get("nav_pages", []))
 
 selected_email = user_record.get("Email", "")
 own_tier = user_record.get("Tier", "Guest")
+
+# Admins often have a "Tier" value (e.g. "Admin") that isn't one of the
+# actual pricing tiers, which would otherwise silently fall back to
+# Consumer pricing below. Catalog already works around this with a preview
+# dropdown — mirror that here so Showcase and Catalog always agree.
+if is_admin(user_record):
+    tier_options = ["Tier1", "Tier2", "Tier3", "Consumer", "Guest"]
+    default_idx = tier_options.index(own_tier) if own_tier in tier_options else 0
+    own_tier = st.selectbox(
+        "👑 Admin Preview — view Showcase pricing as tier", tier_options, index=default_idx,
+    )
 
 try:
     products_df = load_products()
