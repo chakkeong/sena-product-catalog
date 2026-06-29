@@ -15,7 +15,9 @@ from datetime import datetime
 
 import gspread
 import pandas as pd
+import requests
 import streamlit as st
+from google.auth.transport.requests import Request
 from google.oauth2.service_account import Credentials
 
 SCOPES = [
@@ -46,6 +48,13 @@ def get_client():
     creds_dict = dict(st.secrets["gcp_service_account"])
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
     return gspread.authorize(creds)
+
+
+def get_credentials() -> Credentials:
+    """Build a fresh Credentials object for direct REST calls (e.g. Drive
+    file uploads) that gspread's client doesn't expose a path for."""
+    creds_dict = dict(st.secrets["gcp_service_account"])
+    return Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
 
 
 def get_spreadsheet():
@@ -94,6 +103,74 @@ def clear_cache():
     load_sheet.clear()
 
 
+def ensure_worksheet(tab_name: str, headers: list[str]):
+    """Get a worksheet, creating it (with a header row) if it doesn't exist yet."""
+    ss = get_spreadsheet()
+    try:
+        return ss.worksheet(tab_name)
+    except gspread.WorksheetNotFound:
+        ws = ss.add_worksheet(title=tab_name, rows=100, cols=max(len(headers), 2))
+        ws.append_row(headers)
+        return ws
+
+
+# ---------------------------------------------------------------------------
+# Showcase page content (editable from the Dashboard, stored as simple
+# Key/Value rows so new fields can be added later without a schema change)
+# ---------------------------------------------------------------------------
+
+SHOWCASE_DEFAULTS = {
+    "hero_eyebrow": "Ready-made, by concept",
+    "hero_headline": "Every piece is finished and ready. You're choosing a feeling, not a spec sheet.",
+    "hero_lead": (
+        "Sena doesn't build to order — we hold ready-made concepts in stock, each with its own "
+        "wood, fabric, and mood already decided. Pick the one that's you."
+    ),
+    "homey_label": "Homey",
+    "homey_mood": (
+        "Warm, deep-seated pieces for a living room you don't want to leave. "
+        "Soft edges and generous cushioning, in woods that feel lived-in from day one."
+    ),
+    "homey_hero_image": "https://drive.google.com/thumbnail?id=17W_pwUonR3nnyDPsvM-i2eVZAGQi6CWM&sz=w1200",
+    "insta_label": "Insta",
+    "insta_mood": (
+        "Clean lines and a light palette, built to photograph as well as it sits. "
+        "The pieces your living room deserves to be seen in."
+    ),
+    "insta_hero_image": "https://drive.google.com/thumbnail?id=1mYeQCx08U7RVhdpNvyT8ELXto4j4ytpy&sz=w1200",
+    "modern_label": "Modern",
+    "modern_mood": (
+        "Tight, structured silhouettes for smaller spaces that still feel deliberate. "
+        "Less footprint, same presence."
+    ),
+    "modern_hero_image": "https://drive.google.com/thumbnail?id=1knwkTSdYVUbQBAYA98cK0gs0ORT3Ryv_&sz=w1200",
+}
+
+
+def load_showcase_content() -> dict:
+    """Load Showcase page text/images from the sheet, filling in any missing
+    keys with the defaults above so the page never renders blank."""
+    content = dict(SHOWCASE_DEFAULTS)
+    try:
+        df = load_sheet("Showcase")
+    except Exception:
+        return content
+    if not df.empty and "Key" in df.columns and "Value" in df.columns:
+        for _, row in df.iterrows():
+            key = str(row.get("Key", "")).strip()
+            value = row.get("Value", "")
+            if key and str(value).strip():
+                content[key] = str(value)
+    return content
+
+
+def save_showcase_value(key: str, value: str):
+    """Save one Showcase field. Creates the Showcase tab/row on first use."""
+    ensure_worksheet("Showcase", ["Key", "Value"])
+    if not update_row_by_match("Showcase", "Key", key, {"Value": value}):
+        append_row_generic("Showcase", {"Key": key, "Value": value}, ["Key", "Value"])
+
+
 # ---------------------------------------------------------------------------
 # Pricing
 # ---------------------------------------------------------------------------
@@ -110,6 +187,50 @@ def drive_thumbnail_url(image_url: str) -> str:
     if match:
         return f"https://drive.google.com/thumbnail?id={match.group(1)}&sz=w1200"
     return image_url
+
+
+def upload_image_to_drive(file_bytes: bytes, filename: str, mime_type: str) -> str:
+    """
+    Upload an image straight to Drive using the app's own service account,
+    make it publicly viewable (matching how every other catalog/showcase
+    photo already works), and return a ready-to-use thumbnail URL.
+    Raises on failure so the caller can show a clear error to the admin.
+    """
+    creds = get_credentials()
+    creds.refresh(Request())
+    token = creds.token
+
+    boundary = "sena_showcase_upload"
+    metadata = json.dumps({"name": filename})
+    body = (
+        f"--{boundary}\r\n"
+        f"Content-Type: application/json; charset=UTF-8\r\n\r\n"
+        f"{metadata}\r\n"
+        f"--{boundary}\r\n"
+        f"Content-Type: {mime_type}\r\n\r\n"
+    ).encode("utf-8") + file_bytes + f"\r\n--{boundary}--".encode("utf-8")
+
+    upload_resp = requests.post(
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": f"multipart/related; boundary={boundary}",
+        },
+        data=body,
+        timeout=60,
+    )
+    upload_resp.raise_for_status()
+    file_id = upload_resp.json()["id"]
+
+    permission_resp = requests.post(
+        f"https://www.googleapis.com/drive/v3/files/{file_id}/permissions",
+        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        data=json.dumps({"role": "reader", "type": "anyone"}),
+        timeout=30,
+    )
+    permission_resp.raise_for_status()
+
+    return f"https://drive.google.com/thumbnail?id={file_id}&sz=w1200"
 
 
 # ---------------------------------------------------------------------------
