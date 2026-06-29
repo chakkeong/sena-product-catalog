@@ -21,6 +21,10 @@ from utils import (
     APPROVABLE_TIERS,
     load_showcase_content,
     save_showcase_value,
+    load_concepts,
+    add_concept,
+    update_concept,
+    delete_concept,
     upload_image_to_drive,
 )
 
@@ -192,30 +196,44 @@ with st.expander("Top headline & intro text"):
             st.success("Headline and intro updated.")
             st.rerun()
 
-CONCEPT_TABS = [("homey", "Homey"), ("insta", "Insta"), ("modern", "Modern")]
-concept_tabs = st.tabs([label for _, label in CONCEPT_TABS])
+try:
+    concepts = load_concepts()
+except Exception as e:
+    concepts = []
+    st.error(f"Could not load concepts: {e}")
 
-for tab, (concept_id, concept_label) in zip(concept_tabs, CONCEPT_TABS):
+if concepts:
+    concept_tabs = st.tabs([c["label"] or c["id"].title() for c in concepts])
+else:
+    concept_tabs = []
+    st.info("No concepts yet — add your first one below.")
+
+for tab, cdef in zip(concept_tabs, concepts):
+    concept_id = cdef["id"]
     with tab:
         photo_col, fields_col = st.columns([1, 2])
 
-        current_image = showcase_content.get(f"{concept_id}_hero_image", "")
         with photo_col:
-            if current_image:
-                st.image(current_image, width="stretch", caption="Current photo")
+            if cdef["hero_image"]:
+                st.image(cdef["hero_image"], width="stretch", caption="Current photo")
             else:
                 st.caption("No photo set yet.")
 
         with fields_col:
             with st.form(f"showcase_form_{concept_id}"):
-                new_label = st.text_input(
-                    "Concept name",
-                    value=showcase_content.get(f"{concept_id}_label", concept_label),
-                    key=f"label_{concept_id}",
+                new_label = st.text_input("Concept name", value=cdef["label"], key=f"label_{concept_id}")
+                new_keyword = st.text_input(
+                    "Match keyword",
+                    value=cdef["keyword"],
+                    key=f"keyword_{concept_id}",
+                    help=(
+                        "Products whose Name contains this word (e.g. \"homey\") are shown under "
+                        "this concept. Must match something in your Products sheet."
+                    ),
                 )
                 new_mood = st.text_area(
                     "Mood / description",
-                    value=showcase_content.get(f"{concept_id}_mood", ""),
+                    value=cdef["mood"],
                     height=130,
                     key=f"mood_{concept_id}",
                 )
@@ -224,23 +242,66 @@ for tab, (concept_id, concept_label) in zip(concept_tabs, CONCEPT_TABS):
                     type=["jpg", "jpeg", "png", "webp"],
                     key=f"upload_{concept_id}",
                 )
-                if st.form_submit_button(f"Save {concept_label}"):
-                    save_showcase_value(f"{concept_id}_label", new_label)
-                    save_showcase_value(f"{concept_id}_mood", new_mood)
+                save_col, delete_col = st.columns([3, 1])
+                with save_col:
+                    saved = st.form_submit_button("Save changes", width="stretch")
+                with delete_col:
+                    deleted = st.form_submit_button("🗑️ Delete", width="stretch")
+
+                if saved:
+                    updates = {"Label": new_label, "Keyword": new_keyword, "Mood": new_mood}
                     if new_photo is not None:
                         with st.spinner("Uploading photo to Drive..."):
                             try:
-                                new_url = upload_image_to_drive(
+                                updates["HeroImageURL"] = upload_image_to_drive(
                                     new_photo.getvalue(),
                                     new_photo.name,
                                     new_photo.type or "image/jpeg",
                                 )
-                                save_showcase_value(f"{concept_id}_hero_image", new_url)
                             except Exception as e:
                                 st.error(f"Photo upload failed: {e}")
                                 st.stop()
-                    st.success(f"{concept_label} updated.")
+                    update_concept(concept_id, updates)
+                    st.success(f"{new_label or concept_id} updated.")
                     st.rerun()
+
+                if deleted:
+                    delete_concept(concept_id)
+                    st.success(f"{cdef['label'] or concept_id} removed.")
+                    st.rerun()
+
+with st.expander("➕ Add a new concept"):
+    with st.form("add_concept_form", clear_on_submit=True):
+        add_label = st.text_input("Concept name", placeholder="e.g. Scandi")
+        add_keyword = st.text_input(
+            "Match keyword",
+            placeholder="e.g. scandi",
+            help=(
+                "Products whose Name contains this word will show up under this concept. "
+                "Make sure some of your Products sheet rows actually include it."
+            ),
+        )
+        add_mood = st.text_area("Mood / description", height=100)
+        add_photo = st.file_uploader("Photo", type=["jpg", "jpeg", "png", "webp"])
+        if st.form_submit_button("Add concept"):
+            if not add_label or not add_keyword:
+                st.warning("Please give the concept a name and a match keyword.")
+            else:
+                hero_url = ""
+                if add_photo is not None:
+                    with st.spinner("Uploading photo to Drive..."):
+                        try:
+                            hero_url = upload_image_to_drive(
+                                add_photo.getvalue(),
+                                add_photo.name,
+                                add_photo.type or "image/jpeg",
+                            )
+                        except Exception as e:
+                            st.error(f"Photo upload failed: {e}")
+                            st.stop()
+                add_concept(add_label, add_keyword, add_mood, hero_url)
+                st.success(f"{add_label} added.")
+                st.rerun()
 
 st.write("")
 st.caption("Use the sidebar to navigate to Catalog, Cart, and Order History.")

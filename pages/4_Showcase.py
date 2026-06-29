@@ -11,6 +11,7 @@ from utils import (
     load_products,
     drive_thumbnail_url,
     load_showcase_content,
+    load_concepts,
     LOGO_PATH,
 )
 
@@ -29,12 +30,7 @@ render_top_navbar(user_record, st.session_state.get("nav_pages", []))
 # ---------------------------------------------------------------------------
 
 content = load_showcase_content()
-
-CONCEPT_DEFS = [
-    {"id": "homey", "keyword": "homey"},
-    {"id": "insta", "keyword": "insta"},
-    {"id": "modern", "keyword": "modern"},
-]
+concept_defs = load_concepts()
 
 try:
     products_df = load_products()
@@ -44,9 +40,10 @@ except Exception as e:
 
 concepts_data = []
 if products_df is not None and not products_df.empty and "Name" in products_df.columns:
-    for cdef in CONCEPT_DEFS:
+    for cdef in concept_defs:
+        keyword = cdef["keyword"] or cdef["id"]
         matches = products_df[
-            products_df["Name"].astype(str).str.contains(cdef["keyword"], case=False, na=False)
+            products_df["Name"].astype(str).str.contains(keyword, case=False, na=False)
         ]
         products = []
         for _, row in matches.iterrows():
@@ -58,9 +55,9 @@ if products_df is not None and not products_df.empty and "Name" in products_df.c
             })
         concepts_data.append({
             "id": cdef["id"],
-            "label": content.get(f"{cdef['id']}_label", cdef["id"].title()),
-            "mood": content.get(f"{cdef['id']}_mood", ""),
-            "hero_image": content.get(f"{cdef['id']}_hero_image") or (products[0]["image"] if products else ""),
+            "label": cdef["label"] or cdef["id"].title(),
+            "mood": cdef["mood"],
+            "hero_image": cdef["hero_image"] or (products[0]["image"] if products else ""),
             "products": products,
         })
 
@@ -109,8 +106,8 @@ SHOWCASE_HTML_TEMPLATE = """
   .concept-side { width: 100%; flex-shrink: 0; }
   .hero-img, .grain {
     width: 100%; aspect-ratio: 16 / 10; height: auto;
-    border-radius: 12px; margin-bottom: 16px; object-fit: cover;
-    object-position: top center; display: block;
+    border-radius: 12px; margin-bottom: 16px; object-fit: contain;
+    object-position: center; background: #2B1D14; display: block;
   }
   .concept-title { font-size: 1.4rem; margin-bottom: 8px; }
   .concept-mood { color: #D8CBB4; font-size: 0.9rem; }
@@ -240,7 +237,7 @@ SHOWCASE_HTML_TEMPLATE = """
     const concept = CONCEPTS.find(c => c.id === activeId);
     const cardEl = document.getElementById("concept-card");
     if (!concept) {
-      cardEl.innerHTML = '<div class="empty-note">No concepts found. Check that your Products sheet has items named with "Homey", "Insta", or "Modern".</div>';
+      cardEl.innerHTML = '<div class="empty-note">No concepts found yet. Add one from the Showcase Page Editor on the Dashboard.</div>';
       return;
     }
 
