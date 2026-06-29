@@ -490,8 +490,9 @@ WHATSAPP_URL = "https://wa.me/60136338923"
 
 
 def render_contact_widget():
-    """Render a floating Cart indicator + Facebook + WhatsApp widget, fixed
-    to the real browser viewport.
+    """Render a floating Facebook + WhatsApp contact widget, fixed to the
+    real browser viewport (not Streamlit's element wrapper, which can apply
+    a CSS transform during mount and break position:fixed).
 
     This uses components.html rather than st.markdown: st.markdown's
     unsafe_allow_html renders raw HTML via innerHTML under the hood, and
@@ -502,69 +503,35 @@ def render_contact_widget():
     window.parent.document so the actual floating buttons attach to the
     real page rather than being trapped inside this small helper iframe.
 
-    The cart icon is deliberately VISUAL ONLY (shows the item count, no
-    click action) rather than a navigation control. An earlier version
-    tried to bridge a click on it through to st.switch_page() via a hidden
-    button, but that round-trip proved unreliable across browsers/devices.
-    The "Cart" link in the top navbar is native Streamlit page navigation
-    and has worked reliably the whole time — that's the real way to get
-    to the cart; this icon is just a quick at-a-glance count.
-
-    The Facebook/WhatsApp icons are only created once (guarded so repeated
-    reruns don't duplicate them), but the cart badge count is refreshed on
-    every call so it stays live as items are added/removed elsewhere."""
-    cart_items = st.session_state.get("cart", [])
-    cart_count = sum(int(item.get("qty", 0) or 0) for item in cart_items)
-
+    Only created once (guarded so repeated reruns don't duplicate it)."""
     components.html(
         f"""
         <script>
         (function() {{
             try {{
                 var doc = window.parent.document;
-                var widget = doc.getElementById('sena-contact-widget');
-                if (!widget) {{
-                    widget = doc.createElement('div');
-                    widget.id = 'sena-contact-widget';
-                    widget.style.position = 'fixed';
-                    widget.style.bottom = '90px';
-                    widget.style.right = '24px';
-                    widget.style.display = 'flex';
-                    widget.style.flexDirection = 'column';
-                    widget.style.gap = '12px';
-                    widget.style.zIndex = '999999';
-                    widget.innerHTML =
-                        '<div id="sena-cart-icon" title="View your cart from the Cart tab above" ' +
-                        'style="position:relative;width:52px;height:52px;border-radius:50%;display:flex;' +
-                        'align-items:center;justify-content:center;background:#2B1D14;border:1px solid #5C3A21;' +
-                        'color:#F3EAD8;font-size:1.4rem;' +
-                        'box-shadow:0 4px 14px rgba(0,0,0,0.25);">🛒' +
-                        '<span id="sena-cart-badge" style="position:absolute;top:-4px;right:-4px;' +
-                        'min-width:20px;height:20px;border-radius:10px;background:#C9A227;color:#2B1D14;' +
-                        'font-size:0.72rem;font-weight:800;display:none;align-items:center;justify-content:center;' +
-                        'padding:0 5px;font-family:sans-serif;"></span></div>' +
-                        '<a href="{FACEBOOK_URL}" target="_blank" rel="noopener" ' +
-                        'style="width:52px;height:52px;border-radius:50%;display:flex;' +
-                        'align-items:center;justify-content:center;background:#1877F2;' +
-                        'color:#fff;font-weight:800;font-size:1.5rem;font-family:Georgia,serif;' +
-                        'text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);">f</a>' +
-                        '<a href="{WHATSAPP_URL}" target="_blank" rel="noopener" ' +
-                        'style="width:52px;height:52px;border-radius:50%;display:flex;' +
-                        'align-items:center;justify-content:center;background:#25D366;' +
-                        'color:#fff;font-size:1.5rem;text-decoration:none;' +
-                        'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
-                    doc.body.appendChild(widget);
-                }}
-                var badge = doc.getElementById('sena-cart-badge');
-                if (badge) {{
-                    var count = {cart_count};
-                    if (count > 0) {{
-                        badge.textContent = count;
-                        badge.style.display = 'flex';
-                    }} else {{
-                        badge.style.display = 'none';
-                    }}
-                }}
+                if (doc.getElementById('sena-contact-widget')) return;
+                var widget = doc.createElement('div');
+                widget.id = 'sena-contact-widget';
+                widget.style.position = 'fixed';
+                widget.style.bottom = '90px';
+                widget.style.right = '24px';
+                widget.style.display = 'flex';
+                widget.style.flexDirection = 'column';
+                widget.style.gap = '12px';
+                widget.style.zIndex = '999999';
+                widget.innerHTML =
+                    '<a href="{FACEBOOK_URL}" target="_blank" rel="noopener" ' +
+                    'style="width:52px;height:52px;border-radius:50%;display:flex;' +
+                    'align-items:center;justify-content:center;background:#1877F2;' +
+                    'color:#fff;font-weight:800;font-size:1.5rem;font-family:Georgia,serif;' +
+                    'text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);">f</a>' +
+                    '<a href="{WHATSAPP_URL}" target="_blank" rel="noopener" ' +
+                    'style="width:52px;height:52px;border-radius:50%;display:flex;' +
+                    'align-items:center;justify-content:center;background:#25D366;' +
+                    'color:#fff;font-size:1.5rem;text-decoration:none;' +
+                    'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
+                doc.body.appendChild(widget);
             }} catch (e) {{
                 console.error('Sena widget error:', e);
             }}
