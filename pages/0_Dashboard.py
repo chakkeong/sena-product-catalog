@@ -25,7 +25,7 @@ from utils import (
     add_concept,
     update_concept,
     delete_concept,
-    upload_image_to_drive,
+    drive_thumbnail_url,
 )
 
 st.set_page_config(
@@ -234,21 +234,23 @@ else:
             st.caption("No photo set yet.")
 
     with fields_col:
-        uploader_version_key = f"upload_version_{selected_id}"
-        if uploader_version_key not in st.session_state:
-            st.session_state[uploader_version_key] = 0
-
-        # File uploaders inside st.form only update once the form is
-        # submitted, so a preview here would only ever appear at the same
-        # moment as saving. Keeping it outside the form lets it update —
-        # and show a preview — the instant a file is chosen.
-        new_photo = st.file_uploader(
-            "Replace photo (optional)",
-            type=["jpg", "jpeg", "png", "webp"],
-            key=f"upload_{selected_id}_{st.session_state[uploader_version_key]}",
+        # A plain text field updates live (unlike widgets inside a form,
+        # which only refresh on submit), so the preview below it updates as
+        # soon as you paste a link — no separate "preview" step needed.
+        new_photo_link = st.text_input(
+            "Photo — paste a Google Drive share link",
+            value=cdef["hero_image"],
+            key=f"photo_link_{selected_id}",
+            help=(
+                "In Drive: right-click the photo → Share → \"Anyone with the link\" → "
+                "Copy link, then paste it here."
+            ),
         )
-        if new_photo is not None:
-            st.image(new_photo, width="stretch", caption="New photo — not saved yet")
+        preview_url = drive_thumbnail_url(new_photo_link) if new_photo_link.strip() else ""
+        if preview_url:
+            st.image(preview_url, width="stretch", caption="Photo preview")
+        elif new_photo_link.strip():
+            st.caption("Couldn't read a file ID from that link — double-check it's a Drive share link.")
 
         with st.form(f"showcase_form_{selected_id}"):
             new_label = st.text_input("Concept name", value=cdef["label"], key=f"label_{selected_id}")
@@ -275,20 +277,13 @@ else:
                 deleted = st.form_submit_button("🗑️ Delete", width="stretch")
 
             if saved:
-                updates = {"Label": new_label, "Keyword": new_keyword, "Mood": new_mood}
-                if new_photo is not None:
-                    with st.spinner("Uploading photo to Drive..."):
-                        try:
-                            updates["HeroImageURL"] = upload_image_to_drive(
-                                new_photo.getvalue(),
-                                new_photo.name,
-                                new_photo.type or "image/jpeg",
-                            )
-                        except Exception as e:
-                            st.error(f"Photo upload failed: {e}")
-                            st.stop()
+                updates = {
+                    "Label": new_label,
+                    "Keyword": new_keyword,
+                    "Mood": new_mood,
+                    "HeroImageURL": drive_thumbnail_url(new_photo_link) if new_photo_link.strip() else "",
+                }
                 update_concept(selected_id, updates)
-                st.session_state[uploader_version_key] += 1
                 st.success(f"{new_label or selected_id} updated.")
                 st.rerun()
 
@@ -298,16 +293,19 @@ else:
                 st.rerun()
 
 with st.expander("➕ Add a new concept"):
-    if "add_concept_uploader_version" not in st.session_state:
-        st.session_state["add_concept_uploader_version"] = 0
-
-    add_photo = st.file_uploader(
-        "Photo",
-        type=["jpg", "jpeg", "png", "webp"],
-        key=f"add_concept_photo_{st.session_state['add_concept_uploader_version']}",
+    add_photo_link = st.text_input(
+        "Photo — paste a Google Drive share link",
+        key="add_concept_photo_link",
+        help=(
+            "In Drive: right-click the photo → Share → \"Anyone with the link\" → "
+            "Copy link, then paste it here."
+        ),
     )
-    if add_photo is not None:
-        st.image(add_photo, width="stretch", caption="Photo preview — not saved yet")
+    add_preview_url = drive_thumbnail_url(add_photo_link) if add_photo_link.strip() else ""
+    if add_preview_url:
+        st.image(add_preview_url, width="stretch", caption="Photo preview")
+    elif add_photo_link.strip():
+        st.caption("Couldn't read a file ID from that link — double-check it's a Drive share link.")
 
     with st.form("add_concept_form", clear_on_submit=True):
         add_label = st.text_input("Concept name", placeholder="e.g. Scandi")
@@ -324,20 +322,9 @@ with st.expander("➕ Add a new concept"):
             if not add_label or not add_keyword:
                 st.warning("Please give the concept a name and a match keyword.")
             else:
-                hero_url = ""
-                if add_photo is not None:
-                    with st.spinner("Uploading photo to Drive..."):
-                        try:
-                            hero_url = upload_image_to_drive(
-                                add_photo.getvalue(),
-                                add_photo.name,
-                                add_photo.type or "image/jpeg",
-                            )
-                        except Exception as e:
-                            st.error(f"Photo upload failed: {e}")
-                            st.stop()
+                hero_url = drive_thumbnail_url(add_photo_link) if add_photo_link.strip() else ""
                 add_concept(add_label, add_keyword, add_mood, hero_url)
-                st.session_state["add_concept_uploader_version"] += 1
+                st.session_state["add_concept_photo_link"] = ""
                 st.success(f"{add_label} added.")
                 st.rerun()
 
