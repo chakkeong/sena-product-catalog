@@ -385,11 +385,26 @@ SHOWCASE_HTML_TEMPLATE = """
     // at the top of this file on the next run and adds the item for real.
     cardEl.querySelectorAll(".add-cart-btn").forEach(btn => {
       btn.addEventListener("click", () => {
-        btn.disabled = true;
-        btn.textContent = "Adding...";
-        const url = new URL(window.top.location.href);
-        url.searchParams.set("cart_add", btn.dataset.id);
-        window.top.location.href = url.toString();
+        try {
+          btn.disabled = true;
+          btn.textContent = "Adding...";
+          const url = new URL(window.top.location.href);
+          url.searchParams.set("cart_add", btn.dataset.id);
+          window.top.location.href = url.toString();
+          // If navigation actually happens, this whole script context gets
+          // destroyed and this timer never fires. If it DOES fire, that
+          // means the navigation was silently blocked (no error thrown).
+          setTimeout(() => {
+            alert("Add to cart: navigation did not happen — likely blocked by the browser.");
+            btn.disabled = false;
+            btn.textContent = "Add to Cart";
+          }, 1500);
+        } catch (e) {
+          // TEMPORARY diagnostic — remove once Add to Cart is confirmed working.
+          alert("Add to cart error: " + e.name + ": " + e.message);
+          btn.disabled = false;
+          btn.textContent = "Add to Cart";
+        }
       });
     });
   }
