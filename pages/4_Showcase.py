@@ -455,6 +455,16 @@ SHOWCASE_HTML_TEMPLATE = """
           allCartButtons.forEach(b => { b.disabled = true; });
           btn.textContent = "Added ✓";
           matched.click();
+          // Re-enable after a short delay regardless of what Streamlit
+          // does with this component on rerun. If the showcase grid's
+          // content is unchanged (adding to cart doesn't change product
+          // data), Streamlit may not recreate this iframe at all — in
+          // that case this disabled state would otherwise persist
+          // forever, "freezing" every other button on the page.
+          setTimeout(() => {
+            allCartButtons.forEach(b => { b.disabled = false; });
+            btn.textContent = "Add to Cart";
+          }, 1500);
         } else {
           alert("Add to cart: could not find the matching item — please refresh and try again.");
         }
