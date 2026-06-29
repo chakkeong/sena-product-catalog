@@ -109,6 +109,10 @@ SHOWCASE_HTML_TEMPLATE = """
     width: 100%; aspect-ratio: 16 / 10; height: auto;
     border-radius: 12px; margin-bottom: 16px; object-fit: contain;
     object-position: center; background: #2B1D14; display: block;
+    transition: height 0.2s ease, aspect-ratio 0.2s ease;
+  }
+  .hero-img-wrap.expanded .hero-img {
+    aspect-ratio: auto; height: 640px;
   }
   .hero-expand-btn {
     position: absolute; bottom: 28px; right: 12px; width: 36px; height: 36px;
@@ -254,19 +258,16 @@ SHOWCASE_HTML_TEMPLATE = """
 
     const EXPAND_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
 
-    // The thumbnail endpoint is meant for <img> embedding; opening it as a
-    // direct page navigation (a new tab) can prompt for a Google account
-    // even on a publicly-shared file. Drive's "uc?export=view" endpoint is
-    // the one meant for direct viewing and doesn't have that problem.
-    const bigImage = (src) => {
-      const match = src.match(/id=([a-zA-Z0-9_-]+)/);
-      return match ? `https://drive.google.com/uc?export=view&id=${match[1]}` : src;
-    };
-
+    // Enlarging via a real Drive page navigation (even a "public" link) can
+    // trigger Google's account-chooser screen when multiple Google accounts
+    // are signed into the browser — that's a Drive/account-switcher quirk,
+    // not a permissions problem, and there's no URL format that reliably
+    // avoids it. Growing the existing <img> in place instead means there's
+    // no navigation at all, so the prompt never has a chance to appear.
     const heroBlock = concept.hero_image
       ? `<div class="hero-img-wrap">
           <img class="hero-img" src="${concept.hero_image}" loading="lazy" decoding="async" alt="${concept.label} concept" />
-          <a class="hero-expand-btn" href="${bigImage(concept.hero_image)}" target="_blank" rel="noopener" aria-label="View full-size photo">${EXPAND_SVG}</a>
+          <button class="hero-expand-btn" aria-label="Enlarge photo">${EXPAND_SVG}</button>
         </div>`
       : `<div class="grain" style="background:#5C3A21;"></div>`;
 
@@ -296,6 +297,15 @@ SHOWCASE_HTML_TEMPLATE = """
         ${productsBlock}
       </div>
     `;
+
+    const expandBtn = cardEl.querySelector(".hero-expand-btn");
+    if (expandBtn) {
+      expandBtn.addEventListener("click", () => {
+        const wrap = expandBtn.closest(".hero-img-wrap");
+        const nowExpanded = wrap.classList.toggle("expanded");
+        expandBtn.setAttribute("aria-label", nowExpanded ? "Shrink photo" : "Enlarge photo");
+      });
+    }
   }
 
   renderTabs();
