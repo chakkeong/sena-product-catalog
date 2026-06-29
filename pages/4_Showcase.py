@@ -104,11 +104,21 @@ SHOWCASE_HTML_TEMPLATE = """
     padding: 20px; display: flex; flex-direction: column; gap: 24px; padding-bottom: 40px;
   }
   .concept-side { width: 100%; flex-shrink: 0; }
+  .hero-img-wrap { position: relative; }
   .hero-img, .grain {
     width: 100%; aspect-ratio: 16 / 10; height: auto;
     border-radius: 12px; margin-bottom: 16px; object-fit: contain;
     object-position: center; background: #2B1D14; display: block;
   }
+  .hero-expand-btn {
+    position: absolute; bottom: 28px; right: 12px; width: 36px; height: 36px;
+    border-radius: 50%; border: none; background: rgba(43, 29, 20, 0.75);
+    color: #F3EAD8; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; backdrop-filter: blur(2px); transition: background 0.15s;
+    text-decoration: none;
+  }
+  .hero-expand-btn:hover { background: #C9A227; color: #2B1D14; }
+  .hero-expand-btn:focus-visible { outline: 2px solid #C9A227; outline-offset: 2px; }
   .concept-title { font-size: 1.4rem; margin-bottom: 8px; }
   .concept-mood { color: #D8CBB4; font-size: 0.9rem; }
 
@@ -139,13 +149,14 @@ SHOWCASE_HTML_TEMPLATE = """
   /* --- Tablets and up: hero + products sit side-by-side --- */
   @media (min-width: 768px) {
     .concept-card { flex-direction: row; gap: 32px; padding: 28px; padding-bottom: 56px; }
-    .concept-side { width: 320px; }
+    .concept-side { width: 380px; }
   }
 
   /* --- Laptops and up: roomier card, wider side panel, 3-up products --- */
   @media (min-width: 1024px) {
+    .wrap { max-width: 1280px; }
     .concept-card { padding: 32px; padding-bottom: 64px; }
-    .concept-side { width: 360px; }
+    .concept-side { width: 460px; }
     .products { grid-template-columns: 1fr 1fr 1fr; gap: 18px; }
     .concept-title { font-size: 1.5rem; }
   }
@@ -241,8 +252,20 @@ SHOWCASE_HTML_TEMPLATE = """
       return;
     }
 
+    const EXPAND_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>';
+
+    // Open a higher-resolution version in a new tab rather than an in-page
+    // lightbox: this page renders inside an auto-sizing, non-scrolling
+    // iframe, where a position:fixed overlay would center against the
+    // iframe's full content height rather than what's actually on screen.
+    // A new tab sidesteps that entirely and lets people pinch-zoom too.
+    const bigImage = (src) => src.includes("w1200") ? src.replace("w1200", "w2000") : src;
+
     const heroBlock = concept.hero_image
-      ? `<img class="hero-img" src="${concept.hero_image}" loading="lazy" decoding="async" alt="${concept.label} concept" />`
+      ? `<div class="hero-img-wrap">
+          <img class="hero-img" src="${concept.hero_image}" loading="lazy" decoding="async" alt="${concept.label} concept" />
+          <a class="hero-expand-btn" href="${bigImage(concept.hero_image)}" target="_blank" rel="noopener" aria-label="View full-size photo">${EXPAND_SVG}</a>
+        </div>`
       : `<div class="grain" style="background:#5C3A21;"></div>`;
 
     const productsBlock = concept.products.length
