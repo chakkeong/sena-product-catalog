@@ -50,11 +50,19 @@ def get_client():
     return gspread.authorize(creds)
 
 
-def get_credentials() -> Credentials:
+def get_credentials(subject: str | None = None) -> Credentials:
     """Build a fresh Credentials object for direct REST calls (e.g. Drive
-    file uploads) that gspread's client doesn't expose a path for."""
+    file uploads) that gspread's client doesn't expose a path for.
+
+    If `subject` is given (an email address) and domain-wide delegation has
+    been granted for this service account in Google Workspace, the returned
+    credentials act AS that user — needed for Drive uploads, since plain
+    service accounts have no Drive storage quota of their own."""
     creds_dict = dict(st.secrets["gcp_service_account"])
-    return Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    if subject:
+        creds = creds.with_subject(subject)
+    return creds
 
 
 def get_spreadsheet():
@@ -280,12 +288,20 @@ def drive_thumbnail_url(image_url: str) -> str:
 
 def upload_image_to_drive(file_bytes: bytes, filename: str, mime_type: str) -> str:
     """
-    Upload an image straight to Drive using the app's own service account,
-    make it publicly viewable (matching how every other catalog/showcase
-    photo already works), and return a ready-to-use thumbnail URL.
-    Raises on failure so the caller can show a clear error to the admin.
+    Upload an image straight to Drive and return a ready-to-use thumbnail URL.
+    Raises a RuntimeError with Google's actual error detail on failure, so
+    the admin sees something actionable rather than a bare "403 Forbidden".
+
+    Plain service accounts have NO Drive storage quota of their own, so a
+    direct upload from the service account will always fail with
+    storageQuotaExceeded. To fix this for real, set up domain-wide
+    delegation for the service account in Google Workspace, then add:
+        drive_upload_as_email = "lee@senahome.online"
+    to st.secrets — uploads will then be created under that real account's
+    Drive (same as your existing Package tab photos), which has quota.
     """
-    creds = get_credentials()
+    impersonate_email = st.secrets.get("drive_upload_as_email")
+    creds = get_credentials(subject=impersonate_email)
     creds.refresh(Request())
     token = creds.token
 
@@ -308,7 +324,8 @@ def upload_image_to_drive(file_bytes: bytes, filename: str, mime_type: str) -> s
         data=body,
         timeout=60,
     )
-    upload_resp.raise_for_status()
+    if not upload_resp.ok:
+        raise RuntimeError(f"Drive upload failed ({upload_resp.status_code}): {upload_resp.text}")
     file_id = upload_resp.json()["id"]
 
     permission_resp = requests.post(
@@ -317,7 +334,8 @@ def upload_image_to_drive(file_bytes: bytes, filename: str, mime_type: str) -> s
         data=json.dumps({"role": "reader", "type": "anyone"}),
         timeout=30,
     )
-    permission_resp.raise_for_status()
+    if not permission_resp.ok:
+        raise RuntimeError(f"Could not make the photo public ({permission_resp.status_code}): {permission_resp.text}")
 
     return f"https://drive.google.com/thumbnail?id={file_id}&sz=w1200"
 
@@ -471,35 +489,63 @@ WHATSAPP_URL = "https://wa.me/60136338923"
 
 
 def render_contact_widget():
-    """Render a floating Facebook + WhatsApp contact widget, fixed to the
+    """Render a floating Cart + Facebook + WhatsApp widget, fixed to the
     real browser viewport (not Streamlit's element wrapper, which can apply
-    a CSS transform during mount and break position:fixed)."""
+    a CSS transform during mount and break position:fixed).
+
+    The Facebook/WhatsApp icons are only created once (guarded so repeated
+    reruns don't duplicate them), but the cart badge count is refreshed on
+    every call so it stays live as items are added/removed elsewhere."""
+    cart_items = st.session_state.get("cart", [])
+    cart_count = sum(int(item.get("qty", 0) or 0) for item in cart_items)
+
     st.markdown(
         f"""
         <script>
         (function() {{
-            if (document.getElementById('sena-contact-widget')) return;
-            var widget = document.createElement('div');
-            widget.id = 'sena-contact-widget';
-            widget.style.position = 'fixed';
-            widget.style.bottom = '90px';
-            widget.style.right = '24px';
-            widget.style.display = 'flex';
-            widget.style.flexDirection = 'column';
-            widget.style.gap = '12px';
-            widget.style.zIndex = '999999';
-            widget.innerHTML =
-                '<a href="{FACEBOOK_URL}" target="_blank" rel="noopener" ' +
-                'style="width:52px;height:52px;border-radius:50%;display:flex;' +
-                'align-items:center;justify-content:center;background:#1877F2;' +
-                'color:#fff;font-weight:800;font-size:1.5rem;font-family:Georgia,serif;' +
-                'text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);">f</a>' +
-                '<a href="{WHATSAPP_URL}" target="_blank" rel="noopener" ' +
-                'style="width:52px;height:52px;border-radius:50%;display:flex;' +
-                'align-items:center;justify-content:center;background:#25D366;' +
-                'color:#fff;font-size:1.5rem;text-decoration:none;' +
-                'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
-            document.body.appendChild(widget);
+            var widget = document.getElementById('sena-contact-widget');
+            if (!widget) {{
+                widget = document.createElement('div');
+                widget.id = 'sena-contact-widget';
+                widget.style.position = 'fixed';
+                widget.style.bottom = '90px';
+                widget.style.right = '24px';
+                widget.style.display = 'flex';
+                widget.style.flexDirection = 'column';
+                widget.style.gap = '12px';
+                widget.style.zIndex = '999999';
+                widget.innerHTML =
+                    '<a href="?goto=cart" ' +
+                    'style="position:relative;width:52px;height:52px;border-radius:50%;display:flex;' +
+                    'align-items:center;justify-content:center;background:#2B1D14;border:1px solid #5C3A21;' +
+                    'color:#F3EAD8;font-size:1.4rem;text-decoration:none;' +
+                    'box-shadow:0 4px 14px rgba(0,0,0,0.25);">🛒' +
+                    '<span id="sena-cart-badge" style="position:absolute;top:-4px;right:-4px;' +
+                    'min-width:20px;height:20px;border-radius:10px;background:#C9A227;color:#2B1D14;' +
+                    'font-size:0.72rem;font-weight:800;display:none;align-items:center;justify-content:center;' +
+                    'padding:0 5px;font-family:sans-serif;"></span></a>' +
+                    '<a href="{FACEBOOK_URL}" target="_blank" rel="noopener" ' +
+                    'style="width:52px;height:52px;border-radius:50%;display:flex;' +
+                    'align-items:center;justify-content:center;background:#1877F2;' +
+                    'color:#fff;font-weight:800;font-size:1.5rem;font-family:Georgia,serif;' +
+                    'text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,0.25);">f</a>' +
+                    '<a href="{WHATSAPP_URL}" target="_blank" rel="noopener" ' +
+                    'style="width:52px;height:52px;border-radius:50%;display:flex;' +
+                    'align-items:center;justify-content:center;background:#25D366;' +
+                    'color:#fff;font-size:1.5rem;text-decoration:none;' +
+                    'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
+                document.body.appendChild(widget);
+            }}
+            var badge = document.getElementById('sena-cart-badge');
+            if (badge) {{
+                var count = {cart_count};
+                if (count > 0) {{
+                    badge.textContent = count;
+                    badge.style.display = 'flex';
+                }} else {{
+                    badge.style.display = 'none';
+                }}
+            }}
         }})();
         </script>
         """,
