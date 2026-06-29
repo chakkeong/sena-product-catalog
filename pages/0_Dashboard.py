@@ -234,6 +234,22 @@ else:
             st.caption("No photo set yet.")
 
     with fields_col:
+        uploader_version_key = f"upload_version_{selected_id}"
+        if uploader_version_key not in st.session_state:
+            st.session_state[uploader_version_key] = 0
+
+        # File uploaders inside st.form only update once the form is
+        # submitted, so a preview here would only ever appear at the same
+        # moment as saving. Keeping it outside the form lets it update —
+        # and show a preview — the instant a file is chosen.
+        new_photo = st.file_uploader(
+            "Replace photo (optional)",
+            type=["jpg", "jpeg", "png", "webp"],
+            key=f"upload_{selected_id}_{st.session_state[uploader_version_key]}",
+        )
+        if new_photo is not None:
+            st.image(new_photo, width="stretch", caption="New photo — not saved yet")
+
         with st.form(f"showcase_form_{selected_id}"):
             new_label = st.text_input("Concept name", value=cdef["label"], key=f"label_{selected_id}")
             new_keyword = st.text_input(
@@ -251,13 +267,6 @@ else:
                 height=130,
                 key=f"mood_{selected_id}",
             )
-            new_photo = st.file_uploader(
-                "Replace photo (optional)",
-                type=["jpg", "jpeg", "png", "webp"],
-                key=f"upload_{selected_id}",
-            )
-            if new_photo is not None:
-                st.image(new_photo, width="stretch", caption="New photo — not saved yet")
 
             save_col, delete_col = st.columns([3, 1])
             with save_col:
@@ -279,6 +288,7 @@ else:
                             st.error(f"Photo upload failed: {e}")
                             st.stop()
                 update_concept(selected_id, updates)
+                st.session_state[uploader_version_key] += 1
                 st.success(f"{new_label or selected_id} updated.")
                 st.rerun()
 
@@ -288,6 +298,17 @@ else:
                 st.rerun()
 
 with st.expander("➕ Add a new concept"):
+    if "add_concept_uploader_version" not in st.session_state:
+        st.session_state["add_concept_uploader_version"] = 0
+
+    add_photo = st.file_uploader(
+        "Photo",
+        type=["jpg", "jpeg", "png", "webp"],
+        key=f"add_concept_photo_{st.session_state['add_concept_uploader_version']}",
+    )
+    if add_photo is not None:
+        st.image(add_photo, width="stretch", caption="Photo preview — not saved yet")
+
     with st.form("add_concept_form", clear_on_submit=True):
         add_label = st.text_input("Concept name", placeholder="e.g. Scandi")
         add_keyword = st.text_input(
@@ -299,9 +320,6 @@ with st.expander("➕ Add a new concept"):
             ),
         )
         add_mood = st.text_area("Mood / description", height=100)
-        add_photo = st.file_uploader("Photo", type=["jpg", "jpeg", "png", "webp"])
-        if add_photo is not None:
-            st.image(add_photo, width="stretch", caption="Photo preview — not saved yet")
         if st.form_submit_button("Add concept"):
             if not add_label or not add_keyword:
                 st.warning("Please give the concept a name and a match keyword.")
@@ -319,6 +337,7 @@ with st.expander("➕ Add a new concept"):
                             st.error(f"Photo upload failed: {e}")
                             st.stop()
                 add_concept(add_label, add_keyword, add_mood, hero_url)
+                st.session_state["add_concept_uploader_version"] += 1
                 st.success(f"{add_label} added.")
                 st.rerun()
 
