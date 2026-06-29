@@ -425,10 +425,14 @@ SHOWCASE_HTML_TEMPLATE = """
           if (b.textContent.trim() === targetLabel) { matched = b; break; }
         }
         if (matched) {
-          btn.disabled = true;
+          // Disable every Add to Cart button right away (not just this
+          // one) — each click triggers a full page reload behind the
+          // scenes, so a second click landing during that ~1s window
+          // could otherwise get silently dropped.
+          const allCartButtons = cardEl.querySelectorAll(".add-cart-btn");
+          allCartButtons.forEach(b => { b.disabled = true; });
           btn.textContent = "Added ✓";
           matched.click();
-          setTimeout(() => { btn.disabled = false; btn.textContent = "Add to Cart"; }, 1200);
         } else {
           alert("Add to cart: could not find the matching item — please refresh and try again.");
         }
