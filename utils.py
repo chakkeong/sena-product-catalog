@@ -490,8 +490,8 @@ WHATSAPP_URL = "https://wa.me/60136338923"
 
 
 def render_contact_widget():
-    """Render a floating Cart + Facebook + WhatsApp widget, fixed to the
-    real browser viewport.
+    """Render a floating Cart indicator + Facebook + WhatsApp widget, fixed
+    to the real browser viewport.
 
     This uses components.html rather than st.markdown: st.markdown's
     unsafe_allow_html renders raw HTML via innerHTML under the hood, and
@@ -502,31 +502,19 @@ def render_contact_widget():
     window.parent.document so the actual floating buttons attach to the
     real page rather than being trapped inside this small helper iframe.
 
-    The cart icon deliberately does NOT use a plain <a href="..."> link:
-    that causes a full browser navigation/reload, which can reset
-    st.session_state (losing the cart) depending on how the host platform
-    handles session continuity across a hard reload. Instead it clicks a
-    real (visually tucked away) Streamlit button, which triggers Streamlit's
-    own internal page switch — same mechanism as any normal in-app
-    navigation, so session state (the cart) is preserved correctly.
+    The cart icon is deliberately VISUAL ONLY (shows the item count, no
+    click action) rather than a navigation control. An earlier version
+    tried to bridge a click on it through to st.switch_page() via a hidden
+    button, but that round-trip proved unreliable across browsers/devices.
+    The "Cart" link in the top navbar is native Streamlit page navigation
+    and has worked reliably the whole time — that's the real way to get
+    to the cart; this icon is just a quick at-a-glance count.
 
     The Facebook/WhatsApp icons are only created once (guarded so repeated
     reruns don't duplicate them), but the cart badge count is refreshed on
     every call so it stays live as items are added/removed elsewhere."""
     cart_items = st.session_state.get("cart", [])
     cart_count = sum(int(item.get("qty", 0) or 0) for item in cart_items)
-
-    # st.container(height=1) only clips visually (still scrollable/visible),
-    # it doesn't truly hide content — use a marker + CSS sibling selector
-    # for a real display:none instead, same data-testid="stButton" selector
-    # already used (and confirmed working) in render_top_navbar's CSS below.
-    with st.container(key="sena_cart_bridge"):
-        if st.button("GOTOCARTBTN", key="hidden_goto_cart"):
-            st.switch_page("pages/2_Cart.py")
-    st.markdown(
-        '<style>.st-key-sena_cart_bridge { display: none !important; }</style>',
-        unsafe_allow_html=True,
-    )
 
     components.html(
         f"""
@@ -546,15 +534,15 @@ def render_contact_widget():
                     widget.style.gap = '12px';
                     widget.style.zIndex = '999999';
                     widget.innerHTML =
-                        '<a href="#" id="sena-cart-icon" ' +
+                        '<div id="sena-cart-icon" title="View your cart from the Cart tab above" ' +
                         'style="position:relative;width:52px;height:52px;border-radius:50%;display:flex;' +
                         'align-items:center;justify-content:center;background:#2B1D14;border:1px solid #5C3A21;' +
-                        'color:#F3EAD8;font-size:1.4rem;text-decoration:none;cursor:pointer;' +
+                        'color:#F3EAD8;font-size:1.4rem;' +
                         'box-shadow:0 4px 14px rgba(0,0,0,0.25);">🛒' +
                         '<span id="sena-cart-badge" style="position:absolute;top:-4px;right:-4px;' +
                         'min-width:20px;height:20px;border-radius:10px;background:#C9A227;color:#2B1D14;' +
                         'font-size:0.72rem;font-weight:800;display:none;align-items:center;justify-content:center;' +
-                        'padding:0 5px;font-family:sans-serif;"></span></a>' +
+                        'padding:0 5px;font-family:sans-serif;"></span></div>' +
                         '<a href="{FACEBOOK_URL}" target="_blank" rel="noopener" ' +
                         'style="width:52px;height:52px;border-radius:50%;display:flex;' +
                         'align-items:center;justify-content:center;background:#1877F2;' +
@@ -566,19 +554,6 @@ def render_contact_widget():
                         'color:#fff;font-size:1.5rem;text-decoration:none;' +
                         'box-shadow:0 4px 14px rgba(0,0,0,0.25);">💬</a>';
                     doc.body.appendChild(widget);
-
-                    doc.getElementById('sena-cart-icon').addEventListener('click', function(e) {{
-                        e.preventDefault();
-                        var buttons = doc.querySelectorAll('button');
-                        for (var i = 0; i < buttons.length; i++) {{
-                            if (buttons[i].textContent.trim() === 'GOTOCARTBTN') {{
-                                buttons[i].click();
-                                return;
-                            }}
-                        }}
-                        // TEMPORARY diagnostic — remove once cart navigation is confirmed working.
-                        alert('Cart icon: hidden GOTOCARTBTN button not found in the page.');
-                    }});
                 }}
                 var badge = doc.getElementById('sena-cart-badge');
                 if (badge) {{
