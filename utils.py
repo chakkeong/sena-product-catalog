@@ -407,22 +407,40 @@ def append_order_row(row: dict):
 
 
 def update_row_by_match(tab_name: str, match_col: str, match_value: str, updates: dict) -> bool:
-    """Find the first row in tab_name where match_col == match_value and update the given columns in place."""
+    """Find the LAST row in tab_name where match_col == match_value and update the
+    given columns in place.
+
+    FIX (2026-06-30): previously this updated the FIRST matching row. That was
+    silently breaking admin approvals: when an applicant had more than one row
+    in the Applications tab (e.g. they applied more than once before being
+    approved), approving them would update an OLD row's Status to "Approved"
+    while the actual current/pending row was left untouched — so it never
+    disappeared from the "Pending Access Requests" list on the Dashboard even
+    though the Users tab was correctly updated. Matching on the LAST row
+    instead ensures we always update the most recent application for that
+    email, which is the one the pending-list logic treats as current.
+    """
     ws = get_spreadsheet().worksheet(tab_name)
     headers = ws.row_values(1)
     if match_col not in headers:
         return False
     match_idx = headers.index(match_col)
     all_values = ws.get_all_values()
+
+    target_row = None
     for i, row in enumerate(all_values[1:], start=2):  # row 1 is the header row
         if len(row) > match_idx and row[match_idx].strip().lower() == str(match_value).strip().lower():
-            for col_name, new_value in updates.items():
-                if col_name in headers:
-                    col_idx = headers.index(col_name) + 1
-                    ws.update_cell(i, col_idx, new_value)
-            clear_cache()
-            return True
-    return False
+            target_row = i  # keep overwriting -> ends up as the LAST match
+
+    if target_row is None:
+        return False
+
+    for col_name, new_value in updates.items():
+        if col_name in headers:
+            col_idx = headers.index(col_name) + 1
+            ws.update_cell(target_row, col_idx, new_value)
+    clear_cache()
+    return True
 
 
 def delete_row_by_match(tab_name: str, match_col: str, match_value: str) -> bool:
