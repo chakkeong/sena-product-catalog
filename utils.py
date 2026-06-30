@@ -751,6 +751,7 @@ def submit_guest_info(name: str, phone: str, company: str, email: str):
     as Guest') into the GuestInfo tab, separate from the approved-partner
     Users tab. Returns the info as a dict so it can also be stored in
     session_state and stamped onto any POs the guest creates."""
+    ensure_worksheet("GuestInfo", GUEST_INFO_COLUMNS)
     row = {
         "Timestamp": timestamp_now(),
         "Name": name,
