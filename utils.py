@@ -1,11 +1,14 @@
 """
 Shared utilities for Sena Product Catalog.
 Matches the EXISTING sheet structure:
-  Users:    Email, Tier
-  Products: ProductID, Name, Description, Tier1Price, Tier2Price, Tier3Price,
-            ConsumerPrice, ImageURL, Size/Measurement
-  Orders:   PO, Timestamp, Email, Tier, ItemsJSON, Total, Status, Version
-            (one row per PO/version; ItemsJSON is a JSON string of line items)
+  Users:     Email, Tier, Name, Phone, Company, Role
+  Products:  ProductID, Name, Description, Tier1Price, Tier2Price, Tier3Price,
+             ConsumerPrice, ImageURL, Size/Measurement
+  Orders:    PO, Timestamp, Email, Tier, Name, Phone, Company, ItemsJSON,
+             Total, Status, Version
+             (one row per PO/version; ItemsJSON is a JSON string of line items)
+  GuestInfo: Timestamp, Name, Phone, Company, Email
+             (captured once when a visitor clicks "Continue as Guest")
 """
 
 import json
@@ -34,9 +37,10 @@ TIER_PRICE_COLUMN = {
     "Guest": "ConsumerPrice",
 }
 
-ORDERS_COLUMNS = ["PO", "Timestamp", "Email", "Tier", "ItemsJSON", "Total", "Status", "Version"]
+ORDERS_COLUMNS = ["PO", "Timestamp", "Email", "Tier", "Name", "Phone", "Company", "ItemsJSON", "Total", "Status", "Version"]
 APPLICATIONS_COLUMNS = ["Timestamp", "Name", "Email", "Phone", "Company", "Status"]
 USERS_COLUMNS = ["Email", "Tier", "Name", "Phone", "Company", "Role"]
+GUEST_INFO_COLUMNS = ["Timestamp", "Name", "Phone", "Company", "Email"]
 APPROVABLE_TIERS = ["Tier1", "Tier2", "Tier3", "Consumer"]
 
 
@@ -688,6 +692,7 @@ def render_top_navbar(user_record: dict, pages: list):
         if st.session_state.get("guest_mode"):
             if st.button("Exit", width="stretch", key="navbar_exit_guest"):
                 st.session_state.pop("guest_mode", None)
+                st.session_state.pop("guest_info", None)
                 st.rerun()
         else:
             if st.button("Log out", width="stretch", key="navbar_logout"):
@@ -741,6 +746,22 @@ def submit_application(name: str, email: str, phone: str, company: str):
     append_row_generic("Applications", row, APPLICATIONS_COLUMNS)
 
 
+def submit_guest_info(name: str, phone: str, company: str, email: str):
+    """Record a guest's identity (collected once, when they click 'Continue
+    as Guest') into the GuestInfo tab, separate from the approved-partner
+    Users tab. Returns the info as a dict so it can also be stored in
+    session_state and stamped onto any POs the guest creates."""
+    row = {
+        "Timestamp": timestamp_now(),
+        "Name": name,
+        "Phone": phone,
+        "Company": company,
+        "Email": email,
+    }
+    append_row_generic("GuestInfo", row, GUEST_INFO_COLUMNS)
+    return row
+
+
 def get_latest_application(email: str):
     """Return the most recent application row for this email, or None."""
     try:
@@ -762,10 +783,24 @@ def render_login_screen():
         st.login()
 
     st.write("")
-    st.caption("Just browsing? No account needed for guest pricing.")
-    if st.button("Continue as Guest"):
-        st.session_state["guest_mode"] = True
-        st.rerun()
+    st.caption("Just browsing? No account needed for guest pricing — we just need a few details first.")
+
+    with st.expander("Continue as Guest"):
+        with st.form("guest_info_form"):
+            guest_name = st.text_input("Full Name")
+            guest_phone = st.text_input("Phone Number")
+            guest_company = st.text_input("Company")
+            guest_email = st.text_input("Email")
+            submitted = st.form_submit_button("Continue as Guest")
+
+        if submitted:
+            if not guest_name or not guest_phone or not guest_company or not guest_email:
+                st.warning("Please fill in all fields.")
+            else:
+                guest_info = submit_guest_info(guest_name, guest_phone, guest_company, guest_email)
+                st.session_state["guest_info"] = guest_info
+                st.session_state["guest_mode"] = True
+                st.rerun()
 
 
 def render_pending_or_apply(email: str):
@@ -803,17 +838,27 @@ def render_pending_or_apply(email: str):
     st.stop()
 
 
-GUEST_RECORD = {"Email": "guest@guest.local", "Name": "Guest", "Tier": "Guest"}
+GUEST_RECORD_FALLBACK = {"Email": "guest@guest.local", "Name": "Guest", "Tier": "Guest"}
 
 
 def gate_access() -> dict:
     """
     Require Google login and Users-tab approval before showing any page content,
-    unless the visitor has chosen to continue as a Guest.
+    unless the visitor has chosen to continue as a Guest (after submitting their
+    Name/Phone/Company/Email via the guest info form).
     Returns a user record (dict) if successful; otherwise stops the page.
     """
     if st.session_state.get("guest_mode"):
-        return GUEST_RECORD
+        guest_info = st.session_state.get("guest_info")
+        if guest_info:
+            return {
+                "Email": guest_info.get("Email", ""),
+                "Name": guest_info.get("Name", "Guest"),
+                "Phone": guest_info.get("Phone", ""),
+                "Company": guest_info.get("Company", ""),
+                "Tier": "Guest",
+            }
+        return GUEST_RECORD_FALLBACK
 
     if not st.user.is_logged_in:
         render_login_screen()
@@ -834,6 +879,7 @@ def render_user_sidebar(user_record: dict):
         if st.session_state.get("guest_mode"):
             if st.button("Exit Guest Mode", width="stretch"):
                 st.session_state.pop("guest_mode", None)
+                st.session_state.pop("guest_info", None)
                 st.rerun()
         else:
             if st.button("Log out", width="stretch"):
