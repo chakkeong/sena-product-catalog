@@ -83,13 +83,24 @@ for po_number in po_list:
                 width="stretch", hide_index=True,
             )
 
-        customer_record = get_user_record(email) or {}
+        # Pull Name/Phone/Company from the order row itself (stamped at
+        # checkout time in Cart.py) rather than only the Users tab.
+        # get_user_record() only finds approved partners — guests live in
+        # GuestInfo, not Users — so relying on it alone left guest POs with
+        # a blank "Billed to" name/company. We still fall back to
+        # get_user_record() for older orders placed before Name/Phone/Company
+        # were added to the Orders sheet.
+        fallback_record = get_user_record(email) or {}
+        customer_name = current_row.get("Name") or fallback_record.get("Name", "") or email
+        customer_company = current_row.get("Company") or fallback_record.get("Company", "")
+        customer_phone = current_row.get("Phone") or fallback_record.get("Phone", "")
+
         pdf_bytes = generate_po_pdf(
             po_number=po_number,
-            customer_name=customer_record.get("Name", "") or email,
+            customer_name=customer_name,
             customer_email=email,
-            customer_company=customer_record.get("Company", ""),
-            customer_phone=customer_record.get("Phone", ""),
+            customer_company=customer_company,
+            customer_phone=customer_phone,
             tier=current_row.get("Tier", ""),
             status=status,
             timestamp=current_row.get("Timestamp", ""),
@@ -144,6 +155,12 @@ for po_number in po_list:
                         "Timestamp": timestamp_now(),
                         "Email": email,
                         "Tier": current_row.get("Tier", ""),
+                        # Carry forward the buyer's identity onto the amended
+                        # version too, so amendments don't lose the
+                        # "Billed to" info that was on the original order.
+                        "Name": current_row.get("Name", ""),
+                        "Phone": current_row.get("Phone", ""),
+                        "Company": current_row.get("Company", ""),
                         "ItemsJSON": json.dumps(kept_items),
                         "Total": new_total,
                         "Status": "Amended",
