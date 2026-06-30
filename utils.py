@@ -801,7 +801,19 @@ def render_login_screen():
                 guest_info = submit_guest_info(guest_name, guest_phone, guest_company, guest_email)
                 st.session_state["guest_info"] = guest_info
                 st.session_state["guest_mode"] = True
-                st.rerun()
+                # Guests are never admins, so build_nav_pages(False) is
+                # always correct here. We populate nav_pages ourselves
+                # because st.switch_page interrupts app.py mid-execution —
+                # it never reaches the build_nav_pages() call further down
+                # in app.py — so without this, the very first page a new
+                # guest lands on would hit the "Navigation unavailable"
+                # fallback in render_top_navbar.
+                st.session_state["nav_pages"] = build_nav_pages(False)
+                # Explicitly land on Showcase rather than relying on rerun,
+                # which just re-renders whatever page/URL the visitor was
+                # already on (e.g. a deep link to Order History) — that was
+                # producing the wrong landing page for new guests.
+                st.switch_page("pages/4_Showcase.py")
 
 
 def render_pending_or_apply(email: str):
