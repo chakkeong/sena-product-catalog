@@ -78,6 +78,14 @@ with col_b:
         email = cart[0].get("email", "guest@example.com")
         tier = cart[0].get("tier", "Guest")
 
+        # Pull the buyer's identity from the logged-in/guest user record
+        # (rather than the cart) so every PO line carries who actually
+        # placed it — needed for both approved partners and guests, since
+        # guests now provide Name/Phone/Company when they enter guest mode.
+        buyer_name = user_record.get("Name", "")
+        buyer_phone = user_record.get("Phone", "")
+        buyer_company = user_record.get("Company", "")
+
         items_payload = [
             {"id": item["id"], "name": item["name"], "price": item["price"], "qty": item["qty"], "size": item.get("size", "")}
             for item in cart
@@ -88,6 +96,9 @@ with col_b:
             "Timestamp": timestamp,
             "Email": email,
             "Tier": tier,
+            "Name": buyer_name,
+            "Phone": buyer_phone,
+            "Company": buyer_company,
             "ItemsJSON": json.dumps(items_payload),
             "Total": total,
             "Status": "Confirmed",
