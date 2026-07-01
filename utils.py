@@ -1,14 +1,11 @@
 """
 Shared utilities for Sena Product Catalog.
 Matches the EXISTING sheet structure:
-  Users:     Email, Tier, Name, Phone, Company, Role
-  Products:  ProductID, Name, Description, Tier1Price, Tier2Price, Tier3Price,
-             ConsumerPrice, ImageURL, Size/Measurement
-  Orders:    PO, Timestamp, Email, Tier, Name, Phone, Company, ItemsJSON,
-             Total, Status, Version
-             (one row per PO/version; ItemsJSON is a JSON string of line items)
-  GuestInfo: Timestamp, Name, Phone, Company, Email
-             (captured once when a visitor clicks "Continue as Guest")
+  Users:    Email, Tier
+  Products: ProductID, Name, Description, Tier1Price, Tier2Price, Tier3Price,
+            ConsumerPrice, ImageURL, Size/Measurement
+  Orders:   PO, Timestamp, Email, Tier, ItemsJSON, Total, Status, Version
+            (one row per PO/version; ItemsJSON is a JSON string of line items)
 """
 
 import json
@@ -37,10 +34,9 @@ TIER_PRICE_COLUMN = {
     "Guest": "ConsumerPrice",
 }
 
-ORDERS_COLUMNS = ["PO", "Timestamp", "Email", "Tier", "Name", "Phone", "Company", "ItemsJSON", "Total", "Status", "Version"]
+ORDERS_COLUMNS = ["PO", "Timestamp", "Email", "Tier", "ItemsJSON", "Total", "Status", "Version"]
 APPLICATIONS_COLUMNS = ["Timestamp", "Name", "Email", "Phone", "Company", "Status"]
 USERS_COLUMNS = ["Email", "Tier", "Name", "Phone", "Company", "Role"]
-GUEST_INFO_COLUMNS = ["Timestamp", "Name", "Phone", "Company", "Email"]
 APPROVABLE_TIERS = ["Tier1", "Tier2", "Tier3", "Consumer"]
 
 
@@ -368,8 +364,31 @@ def items_total(items: list[dict]) -> float:
 # ---------------------------------------------------------------------------
 
 def generate_po_number() -> str:
-    """Generate a PO number using a timestamp, matching the existing scheme."""
-    return f"PO-{int(time.time())}"
+    """Generate a PO number in the format SHS-PO-YYYYMMDD001, incrementing
+    the daily sequence by reading existing orders for today's date."""
+    today = datetime.now().strftime("%Y%m%d")
+    prefix = f"SHS-PO-{today}"
+
+    try:
+        orders_df = load_orders()
+        if not orders_df.empty and "PO" in orders_df.columns:
+            # Find all POs from today and extract their sequence numbers
+            todays = orders_df["PO"].astype(str).str.startswith(prefix)
+            if todays.any():
+                sequences = []
+                for po in orders_df.loc[todays, "PO"]:
+                    suffix = str(po)[len(prefix):]
+                    if suffix.isdigit():
+                        sequences.append(int(suffix))
+                next_seq = max(sequences) + 1 if sequences else 1
+            else:
+                next_seq = 1
+        else:
+            next_seq = 1
+    except Exception:
+        next_seq = 1
+
+    return f"{prefix}{next_seq:03d}"
 
 
 def get_next_version(orders_df: pd.DataFrame, po_number: str) -> int:
@@ -411,40 +430,22 @@ def append_order_row(row: dict):
 
 
 def update_row_by_match(tab_name: str, match_col: str, match_value: str, updates: dict) -> bool:
-    """Find the LAST row in tab_name where match_col == match_value and update the
-    given columns in place.
-
-    FIX (2026-06-30): previously this updated the FIRST matching row. That was
-    silently breaking admin approvals: when an applicant had more than one row
-    in the Applications tab (e.g. they applied more than once before being
-    approved), approving them would update an OLD row's Status to "Approved"
-    while the actual current/pending row was left untouched — so it never
-    disappeared from the "Pending Access Requests" list on the Dashboard even
-    though the Users tab was correctly updated. Matching on the LAST row
-    instead ensures we always update the most recent application for that
-    email, which is the one the pending-list logic treats as current.
-    """
+    """Find the first row in tab_name where match_col == match_value and update the given columns in place."""
     ws = get_spreadsheet().worksheet(tab_name)
     headers = ws.row_values(1)
     if match_col not in headers:
         return False
     match_idx = headers.index(match_col)
     all_values = ws.get_all_values()
-
-    target_row = None
     for i, row in enumerate(all_values[1:], start=2):  # row 1 is the header row
         if len(row) > match_idx and row[match_idx].strip().lower() == str(match_value).strip().lower():
-            target_row = i  # keep overwriting -> ends up as the LAST match
-
-    if target_row is None:
-        return False
-
-    for col_name, new_value in updates.items():
-        if col_name in headers:
-            col_idx = headers.index(col_name) + 1
-            ws.update_cell(target_row, col_idx, new_value)
-    clear_cache()
-    return True
+            for col_name, new_value in updates.items():
+                if col_name in headers:
+                    col_idx = headers.index(col_name) + 1
+                    ws.update_cell(i, col_idx, new_value)
+            clear_cache()
+            return True
+    return False
 
 
 def delete_row_by_match(tab_name: str, match_col: str, match_value: str) -> bool:
@@ -692,7 +693,6 @@ def render_top_navbar(user_record: dict, pages: list):
         if st.session_state.get("guest_mode"):
             if st.button("Exit", width="stretch", key="navbar_exit_guest"):
                 st.session_state.pop("guest_mode", None)
-                st.session_state.pop("guest_info", None)
                 st.rerun()
         else:
             if st.button("Log out", width="stretch", key="navbar_logout"):
@@ -746,23 +746,6 @@ def submit_application(name: str, email: str, phone: str, company: str):
     append_row_generic("Applications", row, APPLICATIONS_COLUMNS)
 
 
-def submit_guest_info(name: str, phone: str, company: str, email: str):
-    """Record a guest's identity (collected once, when they click 'Continue
-    as Guest') into the GuestInfo tab, separate from the approved-partner
-    Users tab. Returns the info as a dict so it can also be stored in
-    session_state and stamped onto any POs the guest creates."""
-    ensure_worksheet("GuestInfo", GUEST_INFO_COLUMNS)
-    row = {
-        "Timestamp": timestamp_now(),
-        "Name": name,
-        "Phone": phone,
-        "Company": company,
-        "Email": email,
-    }
-    append_row_generic("GuestInfo", row, GUEST_INFO_COLUMNS)
-    return row
-
-
 def get_latest_application(email: str):
     """Return the most recent application row for this email, or None."""
     try:
@@ -784,36 +767,10 @@ def render_login_screen():
         st.login()
 
     st.write("")
-    st.caption("Just browsing? No account needed for guest pricing — we just need a few details first.")
-
-    with st.expander("Continue as Guest"):
-        with st.form("guest_info_form"):
-            guest_name = st.text_input("Full Name")
-            guest_phone = st.text_input("Phone Number")
-            guest_company = st.text_input("Company")
-            guest_email = st.text_input("Email")
-            submitted = st.form_submit_button("Continue as Guest")
-
-        if submitted:
-            if not guest_name or not guest_phone or not guest_company or not guest_email:
-                st.warning("Please fill in all fields.")
-            else:
-                guest_info = submit_guest_info(guest_name, guest_phone, guest_company, guest_email)
-                st.session_state["guest_info"] = guest_info
-                st.session_state["guest_mode"] = True
-                # Guests are never admins, so build_nav_pages(False) is
-                # always correct here. We populate nav_pages ourselves
-                # because st.switch_page interrupts app.py mid-execution —
-                # it never reaches the build_nav_pages() call further down
-                # in app.py — so without this, the very first page a new
-                # guest lands on would hit the "Navigation unavailable"
-                # fallback in render_top_navbar.
-                st.session_state["nav_pages"] = build_nav_pages(False)
-                # Explicitly land on Showcase rather than relying on rerun,
-                # which just re-renders whatever page/URL the visitor was
-                # already on (e.g. a deep link to Order History) — that was
-                # producing the wrong landing page for new guests.
-                st.switch_page("pages/4_Showcase.py")
+    st.caption("Just browsing? No account needed for guest pricing.")
+    if st.button("Continue as Guest"):
+        st.session_state["guest_mode"] = True
+        st.rerun()
 
 
 def render_pending_or_apply(email: str):
@@ -851,27 +808,17 @@ def render_pending_or_apply(email: str):
     st.stop()
 
 
-GUEST_RECORD_FALLBACK = {"Email": "guest@guest.local", "Name": "Guest", "Tier": "Guest"}
+GUEST_RECORD = {"Email": "guest@guest.local", "Name": "Guest", "Tier": "Guest"}
 
 
 def gate_access() -> dict:
     """
     Require Google login and Users-tab approval before showing any page content,
-    unless the visitor has chosen to continue as a Guest (after submitting their
-    Name/Phone/Company/Email via the guest info form).
+    unless the visitor has chosen to continue as a Guest.
     Returns a user record (dict) if successful; otherwise stops the page.
     """
     if st.session_state.get("guest_mode"):
-        guest_info = st.session_state.get("guest_info")
-        if guest_info:
-            return {
-                "Email": guest_info.get("Email", ""),
-                "Name": guest_info.get("Name", "Guest"),
-                "Phone": guest_info.get("Phone", ""),
-                "Company": guest_info.get("Company", ""),
-                "Tier": "Guest",
-            }
-        return GUEST_RECORD_FALLBACK
+        return GUEST_RECORD
 
     if not st.user.is_logged_in:
         render_login_screen()
@@ -892,7 +839,6 @@ def render_user_sidebar(user_record: dict):
         if st.session_state.get("guest_mode"):
             if st.button("Exit Guest Mode", width="stretch"):
                 st.session_state.pop("guest_mode", None)
-                st.session_state.pop("guest_info", None)
                 st.rerun()
         else:
             if st.button("Log out", width="stretch"):
