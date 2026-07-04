@@ -364,31 +364,39 @@ def items_total(items: list[dict]) -> float:
 # ---------------------------------------------------------------------------
 
 def generate_po_number() -> str:
-    """Generate a PO number in the format SHS-PO-YYYYMMDD001, incrementing
-    the daily sequence by reading existing orders for today's date."""
-    today = datetime.now().strftime("%Y%m%d")
-    prefix = f"SHS-PO-{today}"
+    """Generate a PO number in the format SHS-PO-YYYYMMDD + running number.
+
+    The sequence is continuous within a calendar month, then resets to 001
+    at the start of each new month.
+
+    Example:
+        Jul 4  → SHS-PO-20260704001, SHS-PO-20260704002
+        Jul 5  → SHS-PO-20260705003  (continues from 002)
+        Aug 1  → SHS-PO-20260801001  (resets for new month)
+        Aug 2  → SHS-PO-20260802002
+    """
+    now = datetime.now()
+    today = now.strftime("%Y%m%d")
+    this_month = now.strftime("%Y%m")   # used to filter POs from this month only
 
     try:
         orders_df = load_orders()
         if not orders_df.empty and "PO" in orders_df.columns:
-            # Find all POs from today and extract their sequence numbers
-            todays = orders_df["PO"].astype(str).str.startswith(prefix)
-            if todays.any():
-                sequences = []
-                for po in orders_df.loc[todays, "PO"]:
-                    suffix = str(po)[len(prefix):]
-                    if suffix.isdigit():
-                        sequences.append(int(suffix))
-                next_seq = max(sequences) + 1 if sequences else 1
-            else:
-                next_seq = 1
+            # Only scan POs from the current month so the counter resets
+            # cleanly on the 1st of every new month.
+            pattern = re.compile(r"^SHS-PO-(\d{6})\d{2}(\d+)$")
+            highest = 0
+            for po in orders_df["PO"].astype(str):
+                m = pattern.match(po.strip())
+                if m and m.group(1) == this_month:
+                    highest = max(highest, int(m.group(2)))
+            next_seq = highest + 1
         else:
             next_seq = 1
     except Exception:
         next_seq = 1
 
-    return f"{prefix}{next_seq:03d}"
+    return f"SHS-PO-{today}{next_seq:03d}"
 
 
 def get_next_version(orders_df: pd.DataFrame, po_number: str) -> int:
